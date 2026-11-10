@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1729">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Barn Hoops">
+  <title>Barn Basketball · Game Organizer</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#18263b;background:#f3f6fa;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.42}
+    .mast{background:linear-gradient(120deg,#081527,#142b45);color:white;padding:24px 20px 32px}
+    .shell{max-width:1060px;margin:0 auto}.mast-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;gap:12px;align-items:center}.ball{display:grid;place-items:center;background:#ed8437;border-radius:14px;width:50px;height:50px;font-size:27px;box-shadow:0 8px 22px #0003}
+    h1{font-size:24px;letter-spacing:-.8px;line-height:1.1;margin:0}.tag{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#a7bdd4;margin-top:5px;font-weight:750}
+    .header-chip{padding:9px 12px;background:#ffffff14;border:1px solid #ffffff21;border-radius:30px;font-size:12px;font-weight:750;white-space:nowrap}
+    .body{max-width:1060px;margin:-14px auto 0;padding:0 16px 90px;position:relative}
+    .tabs{display:flex;background:#fff;border-radius:16px;padding:6px;gap:3px;box-shadow:0 8px 30px #152b4115;position:sticky;top:8px;z-index:5}
+    .tab{flex:1;border:0;border-radius:11px;background:transparent;color:#61738d;padding:11px 5px;font-size:13px;font-weight:750}.tab.active{background:#132944;color:white}
+    .section{margin-top:20px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:0 2px 12px}.section-head h2{margin:0;font-size:19px;letter-spacing:-.45px}.sub{font-size:12px;color:#78879b;line-height:1.45}
+    .card{background:#fff;border-radius:18px;box-shadow:0 3px 18px #18304e0d;padding:18px;margin-bottom:13px}
+    .game-top{display:flex;justify-content:space-between;align-items:start;gap:12px}.eyebrow{color:#7788a0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800}
+    .game-date{font-size:26px;font-weight:820;letter-spacing:-1px;margin:6px 0 4px}.game-time{color:#4e617b;font-size:14px;font-weight:600}
+    .status-pill{background:#e8f6ee;color:#16734b;border-radius:99px;padding:8px 12px;font-size:12px;font-weight:800;white-space:nowrap}
+    .meter{height:10px;display:flex;gap:3px;margin:20px 0 12px}.meter span{border-radius:4px;background:#e5ebf3;flex:1}.meter span.yes{background:#22a078}.meter span.pending{background:#f5b34c}
+    .stats-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.tile{background:#f4f7fb;border-radius:11px;text-align:center;padding:10px 5px}.tile strong{font-size:23px;display:block;letter-spacing:-1px}.tile small{font-size:11px;color:#6c7d92;font-weight:700}.tile.good strong{color:#18845e}.tile.wait strong{color:#b4761e}
+    .row-actions,.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.btn{border:1px solid #d9e3ef;background:white;color:#18304c;padding:10px 13px;border-radius:10px;font-size:13px;font-weight:750;min-height:41px}.btn.primary{background:#132b48;color:#fff;border-color:#132b48}.btn.orange{background:#ef8437;color:#fff;border-color:#ef8437}.btn.green{background:#15835f;color:white;border-color:#15835f}.btn.light{background:#f3f6fb;border-color:#f3f6fb}.btn.danger{color:#b43c45;border-color:#efd3d7}.btn.mini{font-size:11px;padding:7px 10px;min-height:34px}.btn.ghost{border:0;background:transparent;padding:7px;color:#536983}
+    .notice{border-left:3px solid #eeb051;background:#fff9ed;padding:12px 13px;border-radius:8px;color:#745223;font-size:12px;line-height:1.5;margin-top:14px}
+    .notice.neutral{border-color:#90a4ba;background:#f5f8fb;color:#64768c}
+    .players{display:grid;gap:9px}.player{background:white;border:1px solid #e7edf3;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:11px}
+    .rank{background:#edf2f7;color:#6b7e94;font-size:12px;font-weight:800;display:grid;place-items:center;border-radius:10px;width:31px;min-width:31px;height:34px}
+    .player-info{flex:1;min-width:0}.player-name{font-size:15px;font-weight:800}.player-caption{font-size:12px;color:#8090a1;margin-top:4px}.player-acts{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .badge{font-size:11px;font-weight:800;border-radius:9px;padding:7px 9px;white-space:nowrap;background:#eef2f7;color:#65758d}.badge.yes{background:#e5f7ef;color:#16815c}.badge.pending{background:#fff1d8;color:#a56a0d}.badge.no{background:#f8e9eb;color:#a23b47}.badge.overdue{background:#ffe8cf;color:#ad5612}
+    .empty{font-size:13px;color:#7b8b9d;text-align:center;padding:18px}.info-line{font-size:13px;line-height:1.55;color:#647792;margin:0 0 11px}
+    label{display:block;color:#586d86;font-size:12px;font-weight:800;margin-bottom:7px}.field{display:block;width:100%;padding:12px;border:1px solid #d5dfeb;background:#fff;border-radius:10px;color:#18314c;outline-color:#7faad0}
+    textarea.field{min-height:94px;line-height:1.5;resize:vertical}.two-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-group{margin-bottom:16px}
+    .preview{background:#eff4fa;border-radius:12px;color:#304963;padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+    .mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.mini-box{background:#f6f8fb;border-radius:11px;text-align:center;padding:11px 3px}.mini-box strong{display:block;font-size:21px}.mini-box small{font-size:10px;color:#75859a}
+    .manager{display:flex;align-items:center;gap:10px;min-height:74px}.arrows{display:flex;flex-direction:column;gap:3px}.arrow{height:25px;min-width:31px;border:1px solid #dce4ee;border-radius:6px;background:#fff;color:#536983}
+    .manager .player-caption{line-height:1.4}.manager .player-acts{max-width:160px}.faded{opacity:.55}
+    .table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:12px 7px;text-align:center;border-bottom:1px solid #edf1f6}th:first-child,td:first-child{text-align:left}th{font-size:11px;color:#72849a;text-transform:uppercase;letter-spacing:.5px}td:first-child{font-weight:800}
+    .foot{font-size:11px;color:#8a99aa;text-align:center;padding:18px 0 10px;line-height:1.5}
+    dialog{border:none;border-radius:18px;box-shadow:0 20px 90px #0005;width:min(94vw,470px);padding:21px;color:#1b304d}dialog::backdrop{background:#06172bbb}
+    dialog h3{margin:0 0 8px;font-size:20px}dialog p{font-size:13px;line-height:1.55;color:#61758d}dialog .btnrow{justify-content:flex-end}
+    .option{display:flex;align-items:center;gap:9px;color:#334d6a;padding:8px 0;font-size:14px;font-weight:650}.option input{width:18px;height:18px}
+    .tiny{font-size:11px;color:#8090a3;line-height:1.6}.bottom-space{height:8px}
+    @media(min-width:720px){.mast{padding:28px 24px 38px}.body{padding:0 24px 90px}.main-grid{display:grid;grid-template-columns:1fr 1.35fr;gap:16px;align-items:start}.main-grid .section{margin-top:18px}.header-chip{font-size:13px}h1{font-size:29px}.tab{font-size:14px}}
+    @media(max-width:470px){.player{align-items:flex-start}.player-acts{max-width:142px}.btn.mini{font-size:10px;padding:7px 8px}.game-date{font-size:23px}.brand h1{font-size:21px}.ball{width:44px;height:44px}.header-chip{font-size:10px}}
+  </style>
+</head>
+<body>
+<header class="mast"><div class="shell mast-row"><div class="brand"><div class="ball" aria-hidden="true">🏀</div><div><h1>Barn Basketball</h1><div class="tag">Weekend game organizer</div></div></div><div class="header-chip">THE BARN · 3 ON 3</div></div></header>
+<main class="body">
+  <nav class="tabs" aria-label="App sections">
+    <button class="tab active" data-tab="game">Game</button>
+    <button class="tab" data-tab="players">Players</button>
+    <button class="tab" data-tab="stats">Stats</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+  <div id="content" aria-live="polite"></div>
+  <footer class="foot">Saved privately in this browser on this device · Not synced between devices<br>Back up your data in Settings before clearing browser history.</footer>
+</main>
+
+<dialog id="playerDialog">
+  <form id="playerForm">
+    <h3 id="playerTitle">Add player</h3>
+    <div class="form-group"><label for="playerName">Name</label><input id="playerName" class="field" maxlength="70" required autocomplete="off"></div>
+    <div class="form-group"><label for="playerPhone">Phone number (optional in testing)</label><input id="playerPhone" class="field" inputmode="tel" type="tel" placeholder="(585) 555-0123" autocomplete="off"></div>
+    <label class="option"><input type="checkbox" id="playerRegular"> Regular: pre-fill as confirmed each new game</label>
+    <label class="option"><input type="checkbox" id="playerActive" checked> Active: show in invite list</label>
+    <p class="tiny">Phone numbers stay in your browser, not in the public GitHub source code.</p>
+    <div class="btnrow"><button type="button" class="btn" data-action="close-player">Cancel</button><button class="btn primary" type="submit">Save player</button></div>
+  </form>
+</dialog>
+<dialog id="inviteDialog">
+  <h3 id="inviteTitle">Invite player</h3>
+  <p id="inviteHelp"></p>
+  <div id="inviteMessage" class="preview"></div>
+  <div class="btnrow">
+    <button class="btn" data-action="close-invite">Cancel</button>
+    <button class="btn light" data-action="copy-invite">Copy text</button>
+    <button class="btn orange" id="openMessages" data-action="open-messages">Open Messages</button>
+  </div>
+  <div class="notice neutral">Opening Messages creates a draft; it does not send automatically. When you've actually sent it, return here and mark it sent.</div>
+  <div class="btnrow"><button class="btn green" data-action="sent-invite">I've sent the invitation</button></div>
+</dialog>
+<dialog id="attendanceDialog">
+  <h3>Game attendance</h3>
+  <p>Check who actually played. Confirmed players aren't automatically counted as having played.</p>
+  <div id="attendanceList"></div>
+  <div class="btnrow"><button class="btn" data-action="close-attendance">Cancel</button><button class="btn green" data-action="save-attendance">Save attendance</button></div>
+</dialog>
+<script>
+(function(){
+  "use strict";
+  var KEY = "barn-basketball-local-v1";
+  var DAY = 12 * 60 * 60 * 1000;
+  var view = "game";
+  var editingPlayer = null, invitingPlayer = null;
+
+  function id(){return "id-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8)}
+  function dateLocal(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+  function nextSaturday(after){var d=after?new Date(after+"T12:00:00"):new Date();var days=(6-d.getDay()+7)%7;if(days===0)days=7;d.setDate(d.getDate()+days);return dateLocal(d)}
+  function starter(){
+    var p=[["Mike",true],["Drake",true],["Christopher",true],["John",false],["Dave",false],["Steve",false]].map(function(a,i){return{id:"starter-"+i,name:a[0],phone:"",regular:a[1],active:true}});
+    var g={id:id(),date:nextSaturday(),time:"10:00",capacity:6,roster:{},finished:false,createdAt:Date.now()};
+    p.filter(function(x){return x.regular}).forEach(function(x){g.roster[x.id]={status:"yes",invitedAt:null,regular:true,attended:false}});
+    return {version:1,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?"}};
+  }
+  function load(){try{var raw=localStorage.getItem(KEY);if(raw){var v=JSON.parse(raw);if(v && v.version===1 && Array.isArray(v.players) && Array.isArray(v.games) && v.settings && v.games.length)return v}}catch(e){}return starter()}
+  var state=load();
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert("Could not save to this browser. Check your storage settings.")}}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function game(){return state.games.find(function(g){return g.id===state.activeGameId}) || state.games[state.games.length-1]}
+  function player(pid){return state.players.find(function(p){return p.id===pid})}
+  function entry(g,pid){return g.roster[pid] || null}
+  function occupied(g){return Object.values(g.roster).filter(function(e){return e.status==="yes"||e.status==="pending"}).length}
+  function yesCount(g){return Object.values(g.roster).filter(function(e){return e.status==="yes"}).length}
+  function pendingCount(g){return Object.values(g.roster).filter(function(e){return e.status==="pending"}).length}
+  function stats(pid){var s={asked:0,yes:0,no:0,played:0};state.games.forEach(function(g){var e=entry(g,pid);if(!e)return;if(e.invitedAt){s.asked++;if(e.status==="yes")s.yes++;if(e.status==="no")s.no++}if(e.attended===true)s.played++});return s}
+  function friendlyTime(hm){if(!hm)return "10 AM";var parts=hm.split(":"),h=Number(parts[0]),m=Number(parts[1]);return ((h%12)||12)+(m?":"+String(m).padStart(2,"0"):"")+(h>=12?" PM":" AM")}
+  function dayName(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long"})}
+  function longDate(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
+  function message(){var g=game();return state.settings.template.replace(/\{day\}/gi,dayName(g.date)).replace(/\{time\}/gi,friendlyTime(g.time)).replace(/\{date\}/gi,longDate(g.date))}
+  function statusOf(e){if(!e)return "not invited";if(e.status==="pending"&&e.invitedAt&&Date.now()-e.invitedAt>=DAY)return "overdue";return e.status}
+  function responseLabel(e){var st=statusOf(e);return st==="yes"?"Confirmed":st==="no"?"Declined":st==="pending"?"Awaiting reply":st==="overdue"?"12h overdue":st==="withdrawn"?"Withdrawn":"Not invited"}
+  function miniButton(label,action,pid,cls){return '<button class="btn mini '+(cls||"")+'" data-action="'+action+'" data-id="'+esc(pid)+'">'+label+'</button>'}
+  function summary(g){
+    var yes=yesCount(g),pending=pendingCount(g),free=Math.max(0,g.capacity-yes-pending);
+    var seg="";for(var i=0;i<g.capacity;i++)seg+='<span class="'+(i<yes?"yes":i<yes+pending?"pending":"")+'"></span>';
+    return '<div class="card"><div class="game-top"><div><div class="eyebrow">Upcoming game</div><div class="game-date">'+esc(longDate(g.date))+'</div><div class="game-time">'+esc(friendlyTime(g.time))+' · '+(g.capacity===6?"3-on-3":g.capacity===8?"4-on-4":g.capacity+" players")+'</div></div><span class="status-pill">'+(g.finished?"Attendance saved":"Planning")+'</span></div>'
+      +'<div class="meter" aria-label="'+yes+' confirmed, '+pending+' pending, '+free+' open">'+seg+'</div><div class="stats-tiles"><div class="tile good"><strong>'+yes+'</strong><small>Confirmed</small></div><div class="tile wait"><strong>'+pending+'</strong><small>Pending</small></div><div class="tile"><strong>'+free+'</strong><small>Open spots</small></div></div>'
+      +'<div class="row-actions">'+miniButton("Edit game","go-settings","","") + miniButton("Record who played","attendance","","")+miniButton("Next game","new-game","","")+'</div>'
+      +'<div class="notice neutral">Pending invites reserve spots, so you never accidentally invite a seventh person. A 12-hour-old invite is flagged, not automatically canceled.</div></div>';
+  }
+  function gamePlayerRow(p,index,g){
+    var e=entry(g,p.id),s=statusOf(e);
+    var text='<div class="player-acts">';
+    if(s==="not invited"||s==="no"||s==="withdrawn"){
+      text+=miniButton("Invite","invite",p.id,occupied(g)>=g.capacity?"disabled" : "primary");
+    }else if(s==="yes"){
+      text+='<span class="badge yes">Confirmed</span>'+miniButton("Change","change-response",p.id);
+    }else{
+      text+='<span class="badge '+(s==="overdue"?"overdue":"pending")+'">'+responseLabel(e)+'</span>'
+        + miniButton("Yes","yes",p.id,"green")+miniButton("No","no",p.id)
+        +miniButton("Follow up","followup",p.id)+miniButton("Withdraw","withdraw",p.id);
+    }
+    text+='</div>';
+    var cap=(p.regular?"Regular · ":"")+(p.phone?"Number saved":"No phone number");
+    return '<div class="player"><div class="rank">'+(index+1)+'</div><div class="player-info"><div class="player-name">'+esc(p.name)+'</div><div class="player-caption">'+esc(cap)+'</div></div>'+text+'</div>';
+  }
+  function renderGame(){
+    var g=game(),overdue=state.players.filter(function(p){return p.active&&statusOf(entry(g,p.id))==="overdue"});
+    var players=state.players.filter(function(p){return p.active});
+    var section='<section class="section"><div class="section-head"><h2>Invitation list</h2><button class="btn mini" data-action="go-players">Manage players</button></div>'
+      +'<div class="players">'+players.map(function(p,i){return gamePlayerRow(p,i,g)}).join("")+'</div></section>';
+    var left='<section class="section">'+summary(g)+'</section>'
+      +'<section class="section"><div class="section-head"><h2>Your text</h2></div><div class="card"><div class="preview">'+esc(message())+'</div><div class="row-actions">'+miniButton("Edit wording","go-settings","")+miniButton("Copy text","copy-message","")+'</div></div></section>';
+    if(overdue.length)left+='<div class="notice">'+overdue.length+' invitation(s) are over 12 hours old. Follow up, record a response, or withdraw before inviting someone else.</div>';
+    return '<div class="main-grid"><div>'+left+'</div><div>'+section+'</div></div>';
+  }
+  function renderPlayers(){
+    var rows=state.players.map(function(p,i){return '<div class="player manager '+(!p.active?"faded":"")+'"><div class="rank">'+(i+1)+'</div><div class="arrows">'
+      +'<button class="arrow" data-action="up" data-id="'+esc(p.id)+'" '+(i===0?"disabled":"")+' aria-label="Move '+esc(p.name)+' up">↑</button>'
+      +'<button class="arrow" data-action="down" data-id="'+esc(p.id)+'" '+(i===state.players.length-1?"disabled":"")+' aria-label="Move '+esc(p.name)+' down">↓</button></div>'
+      +'<div class="player-info"><div class="player-name">'+esc(p.name)+'</div><div class="player-caption">'+(p.regular?"Regular · ":"")+(p.active?"Active":"Inactive")+' · '+(p.phone?"Phone saved":"No phone")+'</div></div>'
+      +'<div class="player-acts">'+miniButton("Edit","edit",p.id)+miniButton(p.active?"Deactivate":"Activate","toggle",p.id)+'</div></div>'}).join("");
+    return '<section class="section"><div class="section-head"><div><h2>Player priority</h2><div class="sub">Top of the list gets first consideration.</div></div><button class="btn primary" data-action="add-player">+ Add player</button></div>'
+      +'<div class="players">'+rows+'</div><div class="notice neutral">Tap ↑ or ↓ to reorder. Deactivating keeps a player’s history. Edit a player to change their name, phone number, or regular status.</div>'
+      +'<p class="tiny">Remove a player from the roster entirely using the Delete button inside Edit. Historical stats for a deleted player are no longer shown.</p></section>';
+  }
+  function renderStats(){
+    var rows=state.players.map(function(p){var s=stats(p.id);return '<tr><td>'+esc(p.name)+'</td><td>'+s.asked+'</td><td>'+s.yes+'</td><td>'+s.no+'</td><td>'+s.played+'</td></tr>'}).join("");
+    var recent=state.games.slice().reverse().slice(0,7).map(function(g){var attended=Object.values(g.roster).filter(function(e){return e.attended}).length;return '<div class="player"><div class="player-info"><div class="player-name">'+esc(longDate(g.date))+'</div><div class="player-caption">'+esc(friendlyTime(g.time))+' · '+yesCount(g)+' confirmed · '+(g.finished?attended+" played":"Not finalized")+'</div></div>'+ (g.id===state.activeGameId?'<span class="badge yes">Current</span>':miniButton("View","select-game",g.id))+'</div>'}).join("");
+    return '<section class="section"><div class="section-head"><h2>Player statistics</h2></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Player</th><th>Asked</th><th>Yes</th><th>No</th><th>Played</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<p class="tiny">“Asked” counts recorded invitations. Yes and No count responses to those invitations. “Played” counts attendance you record after a game. Withdrawn/no-response invitations remain in Asked.</p></div>'
+      +'<div class="section-head"><h2>Game history</h2></div><div class="players">'+recent+'</div></section>';
+  }
+  function renderSettings(){
+    var g=game();
+    return '<section class="section"><div class="section-head"><h2>Game & message</h2></div><div class="card"><div class="two-cols"><div class="form-group"><label for="gameDate">Game date</label><input class="field" type="date" id="gameDate" value="'+esc(g.date)+'"></div><div class="form-group"><label for="gameTime">Start time</label><input class="field" type="time" id="gameTime" value="'+esc(g.time)+'"></div></div>'
+      +'<div class="form-group"><label for="capacity">Number of players</label><select id="capacity" class="field"><option value="6" '+(g.capacity===6?"selected":"")+'>6 players · 3-on-3</option><option value="8" '+(g.capacity===8?"selected":"")+'>8 players · 4-on-4</option></select></div>'
+      +'<div class="form-group"><label for="template">Default invitation message</label><textarea id="template" class="field">'+esc(state.settings.template)+'</textarea><div class="tiny">Use {day}, {time}, and {date} so your invitation updates automatically.</div></div>'
+      +'<label>Text preview</label><div class="preview" id="messagePreview">'+esc(message())+'</div>'
+      +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
+      +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
+      +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
+      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Messages open as individual SMS drafts. You press Send yourself and then mark the invitation as sent here. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it.</p>'
+      +'<div class="btnrow"><button class="btn danger" data-action="reset-data">Reset sample data</button></div></div></section>';
+  }
+  function render(){
+    document.querySelectorAll(".tab").forEach(function(el){var on=el.dataset.tab===view;el.classList.toggle("active",on);el.setAttribute("aria-current",on?"page":"false")});
+    document.getElementById("content").innerHTML=view==="game"?renderGame():view==="players"?renderPlayers():view==="stats"?renderStats():renderSettings();
+    document.querySelectorAll('button.disabled').forEach(function(el){el.disabled=true;el.title="All spots are reserved"});
+  }
+  function changeView(v){view=v;render();window.scrollTo({top:0,behavior:"smooth"})}
+  function setResponse(pid,status){
+    var g=game(),e=entry(g,pid)||{status:"not invited",invitedAt:null,regular:false,attended:false};
+    if((status==="yes"||status==="pending") && e.status!=="yes" && e.status!=="pending" && occupied(g)>=g.capacity){alert("All "+g.capacity+" spots are already confirmed or pending. Resolve an invitation first.");return}
+    e.status=status;
+    if(status!=="yes")e.attended=false;
+    g.roster[pid]=e;g.finished=false;save();render();
+  }
+  function openPlayer(pid){
+    editingPlayer=pid||null;
+    var p=pid?player(pid):null;
+    document.getElementById("playerTitle").textContent=p?"Edit "+p.name:"Add player";
+    document.getElementById("playerName").value=p?p.name:"";
+    document.getElementById("playerPhone").value=p?p.phone:"";
+    document.getElementById("playerRegular").checked=p?!!p.regular:false;
+    document.getElementById("playerActive").checked=p?!!p.active:true;
+    var old=document.getElementById("deletePlayer");if(old)old.remove();
+    if(p){var b=document.createElement("button");b.id="deletePlayer";b.type="button";b.className="btn danger";b.textContent="Delete player";b.dataset.action="delete-player";document.getElementById("playerForm").querySelector(".btnrow").prepend(b)}
+    document.getElementById("playerDialog").showModal();
+  }
+  function openInvite(pid,followup){
+    var p=player(pid);if(!p)return;
+    if(!followup && occupied(game())>=game().capacity){alert("Your roster is full when pending invitations are counted. Resolve one first.");return}
+    invitingPlayer=pid;
+    document.getElementById("inviteTitle").textContent=(followup?"Follow up with ":"Invite ")+p.name;
+    document.getElementById("inviteHelp").textContent=p.phone?"Send an individual text to "+p.name+".":"No phone number saved for "+p.name+". You can copy the message or add a phone number in Players.";
+    document.getElementById("inviteMessage").textContent=followup?"Just following up — "+message():message();
+    document.getElementById("openMessages").disabled=!p.phone;
+    document.querySelector('[data-action="sent-invite"]').style.display=followup?"none":"";
+    document.getElementById("inviteDialog").showModal();
+  }
+  function markSent(){
+    if(!invitingPlayer)return;
+    var g=game(),old=entry(g,invitingPlayer);
+    if(occupied(g)>=g.capacity && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
+    g.roster[invitingPlayer]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
+    g.finished=false;save();document.getElementById("inviteDialog").close();render();
+  }
+  function smsHref(phone,msg){return "sms:"+phone.replace(/[^\d+]/g,"")+"&body="+encodeURIComponent(msg)}
+  function copyText(msg){if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(msg).then(function(){alert("Text copied.")}).catch(function(){fallbackCopy(msg)})}else fallbackCopy(msg)}
+  function fallbackCopy(msg){var t=document.createElement("textarea");t.value=msg;document.body.appendChild(t);t.select();try{document.execCommand("copy");alert("Text copied.")}catch(e){alert("Select and copy the preview text instead.")}t.remove()}
+  function attendance(){
+    var g=game(),plist=state.players.filter(function(p){var e=entry(g,p.id);return e && (e.status==="yes"||e.attended)});
+    document.getElementById("attendanceList").innerHTML=plist.length?plist.map(function(p){var e=entry(g,p.id);return '<label class="option"><input type="checkbox" data-attendee="'+esc(p.id)+'" '+(e.attended?"checked":"")+'> '+esc(p.name)+'</label>'}).join(""):'<p class="tiny">No confirmed players yet. Confirm the roster before recording attendance.</p>';
+    document.getElementById("attendanceDialog").showModal();
+  }
+  document.addEventListener("click",function(ev){
+    var t=ev.target.closest("[data-tab],[data-action]");if(!t)return;
+    if(t.dataset.tab){changeView(t.dataset.tab);return}
+    var a=t.dataset.action,pid=t.dataset.id,g=game(),p=player(pid),pos=state.players.findIndex(function(x){return x.id===pid});
+    if(a==="go-settings")changeView("settings");
+    if(a==="go-players")changeView("players");
+    if(a==="add-player")openPlayer(null);
+    if(a==="edit")openPlayer(pid);
+    if(a==="close-player")document.getElementById("playerDialog").close();
+    if(a==="close-invite")document.getElementById("inviteDialog").close();
+    if(a==="close-attendance")document.getElementById("attendanceDialog").close();
+    if(a==="up" && pos>0){var tmp=state.players[pos-1];state.players[pos-1]=state.players[pos];state.players[pos]=tmp;save();render()}
+    if(a==="down" && pos>=0 && pos<state.players.length-1){var tmp2=state.players[pos+1];state.players[pos+1]=state.players[pos];state.players[pos]=tmp2;save();render()}
+    if(a==="toggle" && p){p.active=!p.active;save();render()}
+    if(a==="delete-player" && editingPlayer){var target=player(editingPlayer);if(confirm("Delete "+target.name+"? Past games remain, but this player disappears from reports.")){state.players=state.players.filter(function(x){return x.id!==editingPlayer});document.getElementById("playerDialog").close();save();render()}}
+    if(a==="invite")openInvite(pid,false);
+    if(a==="followup")openInvite(pid,true);
+    if(a==="close-invite")invitingPlayer=null;
+    if(a==="copy-message")copyText(message());
+    if(a==="copy-invite")copyText(document.getElementById("inviteMessage").textContent);
+    if(a==="open-messages" && invitingPlayer){var phone=player(invitingPlayer).phone; if(phone)window.location.href=smsHref(phone,document.getElementById("inviteMessage").textContent)}
+    if(a==="sent-invite")markSent();
+    if(a==="yes")setResponse(pid,"yes");
+    if(a==="no")setResponse(pid,"no");
+    if(a==="withdraw"){if(confirm("Withdraw "+p.name+"'s invitation? This releases the reserved spot, but does not notify them automatically."))setResponse(pid,"withdrawn")}
+    if(a==="change-response"){var chosen=prompt("Change "+p.name+"'s status to yes, no, withdrawn, or not invited:", "no");if(chosen){chosen=chosen.trim().toLowerCase();if(["yes","no","withdrawn"].includes(chosen))setResponse(pid,chosen);else if(chosen==="not invited")setResponse(pid,"not invited");else alert("No changes made.")}}
+    if(a==="attendance")attendance();
+    if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e)e.attended=!!input.checked});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
+    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
+    if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
+    if(a==="save-settings"){
+      var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim();
+      if(!date||!time||!tmpl){alert("Please enter a date, time and message.");return}
+      if(cap<occupied(g)){alert("You already have "+occupied(g)+" confirmed or pending. Resolve invitations before lowering the roster limit.");return}
+      g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;save();render();alert("Game and message saved.")
+    }
+    if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
+    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();save();changeView("game")}}
+  });
+  document.getElementById("playerForm").addEventListener("submit",function(ev){ev.preventDefault();var name=document.getElementById("playerName").value.trim(),phone=document.getElementById("playerPhone").value.trim();if(!name)return;
+    if(editingPlayer){var p=player(editingPlayer);p.name=name;p.phone=phone;p.regular=document.getElementById("playerRegular").checked;p.active=document.getElementById("playerActive").checked}
+    else{state.players.push({id:id(),name:name,phone:phone,regular:document.getElementById("playerRegular").checked,active:document.getElementById("playerActive").checked})}
+    document.getElementById("playerDialog").close();save();render();
+  });
+  document.addEventListener("input",function(ev){if(ev.target.id==="template" || ev.target.id==="gameDate" || ev.target.id==="gameTime"){var g=game(),date=document.getElementById("gameDate").value||g.date,time=document.getElementById("gameTime").value||g.time,tmpl=document.getElementById("template").value;var sample=tmpl.replace(/\{day\}/gi,dayName(date)).replace(/\{time\}/gi,friendlyTime(time)).replace(/\{date\}/gi,longDate(date));document.getElementById("messagePreview").textContent=sample}});
+  document.addEventListener("change",function(ev){if(ev.target.id!=="importFile")return;var file=ev.target.files[0];if(!file)return;
+    var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!data||data.version!==1||!Array.isArray(data.players)||!Array.isArray(data.games)||!data.games.length||!data.settings||!data.activeGameId)throw Error("Invalid backup");
+      if(confirm("Replace current data with this backup? Export your current data first if you want to keep it.")){state=data;save();changeView("game")}}
+      catch(e){alert("That file is not a valid Barn Basketball backup.")}ev.target.value=""};r.readAsText(file);
+  });
+  save();render();
+})();
+</script>
+</body>
+</html>
