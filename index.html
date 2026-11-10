@@ -180,6 +180,10 @@
       +'<div class="players">'+players.map(function(p,i){return gamePlayerRow(p,i,g)}).join("")+'</div></section>';
     var left='<section class="section">'+summary(g)+'</section>'
       +'<section class="section"><div class="section-head"><h2>Your text</h2></div><div class="card"><div class="preview">'+esc(message())+'</div><div class="row-actions">'+miniButton("Edit wording","go-settings","")+miniButton("Copy text","copy-message","")+'</div></div></section>';
+    var draft=readDraft();
+    if(draft&&draft.gameId===g.id&&player(draft.pid)&&(!entry(g,draft.pid)||entry(g,draft.pid).status!=="pending")){
+      left+='<div class="card"><div class="eyebrow">Unconfirmed invitation</div><p class="info-line">Draft for <strong>'+esc(player(draft.pid).name)+'</strong> has not been confirmed as sent. Return to the invitation or discard it.</p><div class="btnrow">'+miniButton("Continue invitation","resume-invite",draft.pid,"orange")+miniButton("Discard draft","discard-draft",draft.pid)+'</div></div>';
+    }
     if(overdue.length)left+='<div class="notice">'+overdue.length+' invitation(s) are over 12 hours old. Follow up, record a response, or withdraw before inviting someone else.</div>';
     return '<div class="main-grid"><div>'+left+'</div><div>'+section+'</div></div>';
   }
@@ -354,10 +358,17 @@
     if(a==="delete-player" && editingPlayer){var target=player(editingPlayer);if(confirm("Delete "+target.name+"? Past games remain, but this player disappears from reports.")){state.players=state.players.filter(function(x){return x.id!==editingPlayer});document.getElementById("playerDialog").close();save();render()}}
     if(a==="invite")openInvite(pid,false);
     if(a==="followup")openInvite(pid,true);
+    if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup)}
+    if(a==="discard-draft"){if(confirm("Discard this unsent invitation draft?")){writeDraft(null);render()}}
+    if(a==="not-sent"){if(confirm("Mark this invitation as NOT sent? This clears the pending spot so you can invite them properly.")){
+      var e=entry(g,pid);if(e){e.status="not invited";e.invitedAt=null;e.noShow=false;e.attended=false;save();render()}
+    }}
     if(a==="close-invite")invitingPlayer=null;
     if(a==="copy-message")copyText(message());
-    if(a==="copy-invite")copyText(document.getElementById("inviteMessage").textContent);
-    if(a==="open-messages" && invitingPlayer){var phone=player(invitingPlayer).phone; if(phone)window.location.href=smsHref(phone,document.getElementById("inviteMessage").textContent)}
+    if(a==="copy-invite"){flagAttempt();copyText(document.getElementById("inviteMessage").textContent)}
+    if((a==="open-messages"||a==="open-plain-messages") && invitingPlayer && player(invitingPlayer).phone){
+      flagAttempt(); // SMS anchor's default navigation opens Messages; do not override here.
+    }
     if(a==="sent-invite")markSent();
     if(a==="yes")setResponse(pid,"yes");
     if(a==="no")setResponse(pid,"no");
@@ -366,7 +377,7 @@
     if(a==="change-response"){var chosen=prompt("Change "+p.name+"'s status to yes, no, withdrawn, or not invited:", "no");if(chosen){chosen=chosen.trim().toLowerCase();if(["yes","no","withdrawn"].includes(chosen))setResponse(pid,chosen);else if(chosen==="not invited")setResponse(pid,"not invited");else alert("No changes made.")}}
     if(a==="attendance")attendance();
     if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e){e.noShow=!!input.checked;e.attended=!e.noShow}});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
-    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
+    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
     if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
     if(a==="save-settings"){
       var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim();
@@ -375,7 +386,7 @@
       g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;save();render();alert("Game and message saved.")
     }
     if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
-    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();save();changeView("game")}}
+    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();writeDraft(null);save();changeView("game")}}
   });
   document.getElementById("playerForm").addEventListener("submit",function(ev){ev.preventDefault();var name=document.getElementById("playerName").value.trim(),phone=document.getElementById("playerPhone").value.trim();if(!name)return;
     if(editingPlayer){var p=player(editingPlayer);p.name=name;p.phone=phone;p.regular=document.getElementById("playerRegular").checked;p.active=document.getElementById("playerActive").checked}
