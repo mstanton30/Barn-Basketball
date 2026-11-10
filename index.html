@@ -350,7 +350,7 @@
     if(a==="choose-contact")chooseContact();
     if(a==="edit")openPlayer(pid);
     if(a==="close-player")document.getElementById("playerDialog").close();
-    if(a==="close-invite")document.getElementById("inviteDialog").close();
+    if(a==="close-invite"){document.getElementById("inviteDialog").close();render()}
     if(a==="close-attendance")document.getElementById("attendanceDialog").close();
     if(a==="up" && pos>0){var tmp=state.players[pos-1];state.players[pos-1]=state.players[pos];state.players[pos]=tmp;save();render()}
     if(a==="down" && pos>=0 && pos<state.players.length-1){var tmp2=state.players[pos+1];state.players[pos+1]=state.players[pos];state.players[pos]=tmp2;save();render()}
