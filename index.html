@@ -8,13 +8,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Barn Hoops">
   <title>Barn Basketball · Game Organizer</title>
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="apple-touch-icon.png?v=2" type="image/png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
   <style>
     :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#18263b;background:#f3f6fa;font-synthesis:none}
     *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.42}
     .mast{background:linear-gradient(120deg,#081527,#142b45);color:white;padding:24px 20px 32px}
     .shell{max-width:1060px;margin:0 auto}.mast-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .brand{display:flex;gap:12px;align-items:center}.ball{display:grid;place-items:center;background:#ed8437;border-radius:14px;width:50px;height:50px;font-size:27px;box-shadow:0 8px 22px #0003}
+    .brand{display:flex;gap:12px;align-items:center}.ball{display:grid;place-items:center;object-fit:cover;background:#132b48;border-radius:14px;width:50px;height:50px;font-size:27px;box-shadow:0 8px 22px #0003}
     h1{font-size:24px;letter-spacing:-.8px;line-height:1.1;margin:0}.tag{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#a7bdd4;margin-top:5px;font-weight:750}
     .header-chip{padding:9px 12px;background:#ffffff14;border:1px solid #ffffff21;border-radius:30px;font-size:12px;font-weight:750;white-space:nowrap}
     .body{max-width:1060px;margin:-14px auto 0;padding:0 16px 90px;position:relative}
@@ -52,7 +53,7 @@
   </style>
 </head>
 <body>
-<header class="mast"><div class="shell mast-row"><div class="brand"><div class="ball" aria-hidden="true">🏀</div><div><h1>Barn Basketball</h1><div class="tag">Weekend game organizer</div></div></div><div class="header-chip">THE BARN · 3 ON 3</div></div></header>
+<header class="mast"><div class="shell mast-row"><div class="brand"><img class="ball" src="apple-touch-icon.png?v=2" alt="" aria-hidden="true"><div><h1>Barn Basketball</h1><div class="tag">Weekend game organizer</div></div></div><div class="header-chip">THE BARN · 3 ON 3</div></div></header>
 <main class="body">
   <nav class="tabs" aria-label="App sections">
     <button class="tab active" data-tab="game">Game</button>
