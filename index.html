@@ -89,10 +89,10 @@
   <div class="btnrow"><button class="btn green" data-action="sent-invite">I've sent the invitation</button></div>
 </dialog>
 <dialog id="attendanceDialog">
-  <h3>Game attendance</h3>
-  <p>Check who actually played. Confirmed players aren't automatically counted as having played.</p>
+  <h3>Review no-shows</h3>
+  <p>Check anyone who confirmed but did <strong>not</strong> play. Other Yes players automatically count as played three hours after game start. Corrections are allowed later.</p>
   <div id="attendanceList"></div>
-  <div class="btnrow"><button class="btn" data-action="close-attendance">Cancel</button><button class="btn green" data-action="save-attendance">Save attendance</button></div>
+  <div class="btnrow"><button class="btn" data-action="close-attendance">Cancel</button><button class="btn green" data-action="save-attendance">Save no-shows</button></div>
 </dialog>
 <script>
 (function(){
@@ -111,7 +111,8 @@
     p.filter(function(x){return x.regular}).forEach(function(x){g.roster[x.id]={status:"yes",invitedAt:null,regular:true,attended:false}});
     return {version:1,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?"}};
   }
-  function load(){try{var raw=localStorage.getItem(KEY);if(raw){var v=JSON.parse(raw);if(v && v.version===1 && Array.isArray(v.players) && Array.isArray(v.games) && v.settings && v.games.length)return v}}catch(e){}return starter()}
+  function migrate(v){v.games.forEach(function(g){if(!g.roster)return;Object.keys(g.roster).forEach(function(pid){var e=g.roster[pid];if(e&&e.status==="yes"&&typeof e.noShow!=="boolean"&&g.finished===true)e.noShow=e.attended===false})});return v}
+  function load(){try{var raw=localStorage.getItem(KEY);if(raw){var v=JSON.parse(raw);if(v && v.version===1 && Array.isArray(v.players) && Array.isArray(v.games) && v.settings && v.games.length)return migrate(v)}}catch(e){}return starter()}
   var state=load();
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert("Could not save to this browser. Check your storage settings.")}}
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -121,7 +122,11 @@
   function occupied(g){return Object.values(g.roster).filter(function(e){return e.status==="yes"||e.status==="pending"}).length}
   function yesCount(g){return Object.values(g.roster).filter(function(e){return e.status==="yes"}).length}
   function pendingCount(g){return Object.values(g.roster).filter(function(e){return e.status==="pending"}).length}
-  function stats(pid){var s={asked:0,yes:0,no:0,played:0};state.games.forEach(function(g){var e=entry(g,pid);if(!e)return;if(e.invitedAt){s.asked++;if(e.status==="yes")s.yes++;if(e.status==="no")s.no++}if(e.attended===true)s.played++});return s}
+  function gameStart(g){var t=new Date(g.date+"T"+(g.time||"10:00")+":00").getTime();return Number.isFinite(t)?t:Infinity}
+  function afterDeadline(g){return Date.now()>=gameStart(g)+3*60*60*1000}
+  function playedFor(g,e){return !!(e&&e.status==="yes"&&e.noShow!==true&&afterDeadline(g))}
+  function gamePlayedCount(g){return Object.values(g.roster).filter(function(e){return playedFor(g,e)}).length}
+  function stats(pid){var s={yes:0,no:0,noShow:0,played:0};state.games.forEach(function(g){var e=entry(g,pid);if(!e)return;if(e.status==="yes"){s.yes++;if(e.noShow===true)s.noShow++}if(e.status==="no")s.no++;if(playedFor(g,e))s.played++});return s}
   function friendlyTime(hm){if(!hm)return "10 AM";var parts=hm.split(":"),h=Number(parts[0]),m=Number(parts[1]);return ((h%12)||12)+(m?":"+String(m).padStart(2,"0"):"")+(h>=12?" PM":" AM")}
   function dayName(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long"})}
   function longDate(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
@@ -132,9 +137,9 @@
   function summary(g){
     var yes=yesCount(g),pending=pendingCount(g),free=Math.max(0,g.capacity-yes-pending);
     var seg="";for(var i=0;i<g.capacity;i++)seg+='<span class="'+(i<yes?"yes":i<yes+pending?"pending":"")+'"></span>';
-    return '<div class="card"><div class="game-top"><div><div class="eyebrow">Upcoming game</div><div class="game-date">'+esc(longDate(g.date))+'</div><div class="game-time">'+esc(friendlyTime(g.time))+' · '+(g.capacity===6?"3-on-3":g.capacity===8?"4-on-4":g.capacity+" players")+'</div></div><span class="status-pill">'+(g.finished?"Attendance saved":"Planning")+'</span></div>'
+    return '<div class="card"><div class="game-top"><div><div class="eyebrow">Upcoming game</div><div class="game-date">'+esc(longDate(g.date))+'</div><div class="game-time">'+esc(friendlyTime(g.time))+' · '+(g.capacity===6?"3-on-3":g.capacity===8?"4-on-4":g.capacity+" players")+'</div></div><span class="status-pill">'+(afterDeadline(g)?"Attendance counted":Date.now()>=gameStart(g)?"Game in progress":"Planning")+'</span></div>'
       +'<div class="meter" aria-label="'+yes+' confirmed, '+pending+' pending, '+free+' open">'+seg+'</div><div class="stats-tiles"><div class="tile good"><strong>'+yes+'</strong><small>Confirmed</small></div><div class="tile wait"><strong>'+pending+'</strong><small>Pending</small></div><div class="tile"><strong>'+free+'</strong><small>Open spots</small></div></div>'
-      +'<div class="row-actions">'+miniButton("Edit game","go-settings","","") + miniButton("Record who played","attendance","","")+miniButton("Next game","new-game","","")+'</div>'
+      +'<div class="row-actions">'+miniButton("Edit game","go-settings","","") + miniButton("Review no-shows","attendance","","")+miniButton("Next game","new-game","","")+'</div>'
       +'<div class="notice neutral">Pending invites reserve spots, so you never accidentally invite a seventh person. A 12-hour-old invite is flagged, not automatically canceled.</div></div>';
   }
   function gamePlayerRow(p,index,g){
@@ -143,7 +148,9 @@
     if(s==="not invited"||s==="no"||s==="withdrawn"){
       text+=miniButton("Invite","invite",p.id,occupied(g)>=g.capacity?"disabled" : "primary");
     }else if(s==="yes"){
-      text+='<span class="badge yes">Confirmed</span>'+miniButton("Change","change-response",p.id);
+      text+='<span class="badge '+(e.noShow?"no":"yes")+'">'+(e.noShow?"No-show":"Confirmed")+'</span>'
+        +(Date.now()>=gameStart(g)?miniButton(e.noShow?"Undo no-show":"No-show","toggle-no-show",p.id,e.noShow?"light":"danger"):"")
+        +miniButton("Change","change-response",p.id);
     }else{
       text+='<span class="badge '+(s==="overdue"?"overdue":"pending")+'">'+responseLabel(e)+'</span>'
         + miniButton("Yes","yes",p.id,"green")+miniButton("No","no",p.id)
@@ -174,10 +181,10 @@
       +'<p class="tiny">Remove a player from the roster entirely using the Delete button inside Edit. Historical stats for a deleted player are no longer shown.</p></section>';
   }
   function renderStats(){
-    var rows=state.players.map(function(p){var s=stats(p.id);return '<tr><td>'+esc(p.name)+'</td><td>'+s.asked+'</td><td>'+s.yes+'</td><td>'+s.no+'</td><td>'+s.played+'</td></tr>'}).join("");
-    var recent=state.games.slice().reverse().slice(0,7).map(function(g){var attended=Object.values(g.roster).filter(function(e){return e.attended}).length;return '<div class="player"><div class="player-info"><div class="player-name">'+esc(longDate(g.date))+'</div><div class="player-caption">'+esc(friendlyTime(g.time))+' · '+yesCount(g)+' confirmed · '+(g.finished?attended+" played":"Not finalized")+'</div></div>'+ (g.id===state.activeGameId?'<span class="badge yes">Current</span>':miniButton("View","select-game",g.id))+'</div>'}).join("");
-    return '<section class="section"><div class="section-head"><h2>Player statistics</h2></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Player</th><th>Asked</th><th>Yes</th><th>No</th><th>Played</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-      +'<p class="tiny">“Asked” counts recorded invitations. Yes and No count responses to those invitations. “Played” counts attendance you record after a game. Withdrawn/no-response invitations remain in Asked.</p></div>'
+    var rows=state.players.map(function(p){var s=stats(p.id);return '<tr><td>'+esc(p.name)+'</td><td>'+s.yes+'</td><td>'+s.no+'</td><td>'+s.noShow+'</td><td>'+s.played+'</td></tr>'}).join("");
+    var recent=state.games.slice().reverse().slice(0,7).map(function(g){var attended=gamePlayedCount(g);return '<div class="player"><div class="player-info"><div class="player-name">'+esc(longDate(g.date))+'</div><div class="player-caption">'+esc(friendlyTime(g.time))+' · '+yesCount(g)+' confirmed · '+(afterDeadline(g)?attended+" played":"Auto-count after game +3h")+'</div></div>'+ (g.id===state.activeGameId?'<span class="badge yes">Current</span>':miniButton("View","select-game",g.id))+'</div>'}).join("");
+    return '<section class="section"><div class="section-head"><h2>Player statistics</h2></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Player</th><th>Yes</th><th>No</th><th>No-show</th><th>Played</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<p class="tiny">Yes = accepted (including regulars), No = declined, No-show = accepted but absent. Played is counted automatically three hours after game start for Yes players not marked No-show. You can correct mistakes afterward.</p></div>'
       +'<div class="section-head"><h2>Game history</h2></div><div class="players">'+recent+'</div></section>';
   }
   function renderSettings(){
@@ -189,7 +196,7 @@
       +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
       +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
       +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
-      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Messages open as individual SMS drafts. You press Send yourself and then mark the invitation as sent here. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it.</p>'
+      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Messages open as individual SMS drafts. You press Send yourself and then mark the invitation as sent here. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
       +'<div class="btnrow"><button class="btn danger" data-action="reset-data">Reset sample data</button></div></div></section>';
   }
   function render(){
@@ -202,7 +209,7 @@
     var g=game(),e=entry(g,pid)||{status:"not invited",invitedAt:null,regular:false,attended:false};
     if((status==="yes"||status==="pending") && e.status!=="yes" && e.status!=="pending" && occupied(g)>=g.capacity){alert("All "+g.capacity+" spots are already confirmed or pending. Resolve an invitation first.");return}
     e.status=status;
-    if(status!=="yes")e.attended=false;
+    if(status!=="yes"){e.attended=false;e.noShow=false}
     g.roster[pid]=e;g.finished=false;save();render();
   }
   function openPlayer(pid){
@@ -239,8 +246,8 @@
   function copyText(msg){if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(msg).then(function(){alert("Text copied.")}).catch(function(){fallbackCopy(msg)})}else fallbackCopy(msg)}
   function fallbackCopy(msg){var t=document.createElement("textarea");t.value=msg;document.body.appendChild(t);t.select();try{document.execCommand("copy");alert("Text copied.")}catch(e){alert("Select and copy the preview text instead.")}t.remove()}
   function attendance(){
-    var g=game(),plist=state.players.filter(function(p){var e=entry(g,p.id);return e && (e.status==="yes"||e.attended)});
-    document.getElementById("attendanceList").innerHTML=plist.length?plist.map(function(p){var e=entry(g,p.id);return '<label class="option"><input type="checkbox" data-attendee="'+esc(p.id)+'" '+(e.attended?"checked":"")+'> '+esc(p.name)+'</label>'}).join(""):'<p class="tiny">No confirmed players yet. Confirm the roster before recording attendance.</p>';
+    var g=game(),plist=state.players.filter(function(p){var e=entry(g,p.id);return e&&e.status==="yes"});
+    document.getElementById("attendanceList").innerHTML=plist.length?plist.map(function(p){var e=entry(g,p.id);return '<label class="option"><input type="checkbox" data-attendee="'+esc(p.id)+'" '+(e.noShow===true?"checked":"")+'> '+esc(p.name)+' — did not play</label>'}).join(""):'<p class="tiny">No confirmed players yet. Confirm the roster before recording no-shows.</p>';
     document.getElementById("attendanceDialog").showModal();
   }
   document.addEventListener("click",function(ev){
@@ -267,10 +274,11 @@
     if(a==="sent-invite")markSent();
     if(a==="yes")setResponse(pid,"yes");
     if(a==="no")setResponse(pid,"no");
+    if(a==="toggle-no-show" && p){var e=entry(g,pid);if(e&&e.status==="yes"){e.noShow=!e.noShow;e.attended=!e.noShow;save();render()}}
     if(a==="withdraw"){if(confirm("Withdraw "+p.name+"'s invitation? This releases the reserved spot, but does not notify them automatically."))setResponse(pid,"withdrawn")}
     if(a==="change-response"){var chosen=prompt("Change "+p.name+"'s status to yes, no, withdrawn, or not invited:", "no");if(chosen){chosen=chosen.trim().toLowerCase();if(["yes","no","withdrawn"].includes(chosen))setResponse(pid,chosen);else if(chosen==="not invited")setResponse(pid,"not invited");else alert("No changes made.")}}
     if(a==="attendance")attendance();
-    if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e)e.attended=!!input.checked});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
+    if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e){e.noShow=!!input.checked;e.attended=!e.noShow}});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
     if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
     if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
     if(a==="save-settings"){
@@ -287,6 +295,8 @@
     else{state.players.push({id:id(),name:name,phone:phone,regular:document.getElementById("playerRegular").checked,active:document.getElementById("playerActive").checked})}
     document.getElementById("playerDialog").close();save();render();
   });
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&(view==="game"||view==="stats"))render()});
+  setInterval(function(){if(!document.hidden&&(view==="game"||view==="stats"))render()},60000);
   document.addEventListener("input",function(ev){if(ev.target.id==="template" || ev.target.id==="gameDate" || ev.target.id==="gameTime"){var g=game(),date=document.getElementById("gameDate").value||g.date,time=document.getElementById("gameTime").value||g.time,tmpl=document.getElementById("template").value;var sample=tmpl.replace(/\{day\}/gi,dayName(date)).replace(/\{time\}/gi,friendlyTime(time)).replace(/\{date\}/gi,longDate(date));document.getElementById("messagePreview").textContent=sample}});
   document.addEventListener("change",function(ev){if(ev.target.id!=="importFile")return;var file=ev.target.files[0];if(!file)return;
     var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!data||data.version!==1||!Array.isArray(data.players)||!Array.isArray(data.games)||!data.games.length||!data.settings||!data.activeGameId)throw Error("Invalid backup");
