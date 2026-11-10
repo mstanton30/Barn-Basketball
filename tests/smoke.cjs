@@ -6,7 +6,7 @@ assert.ok(html.includes('autocomplete="name"'));assert.ok(html.includes('autocom
 const memory={},nodes={},events={},alerts=[];
 const node=id=>nodes[id]||(nodes[id]={
   textContent:"",innerHTML:"",style:{},value:"",checked:false,focused:false,
-  focus(){this.focused=true},
+  focus(){this.focused=true},remove(){},
   showModal(){this.open=true},close(){this.open=false},
   addEventListener(type,cb){events["node:"+id+":"+type]=cb},
   querySelector(){return {prepend(){}}},prepend(){}
