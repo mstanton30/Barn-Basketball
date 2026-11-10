@@ -68,8 +68,14 @@
 <dialog id="playerDialog">
   <form id="playerForm">
     <h3 id="playerTitle">Add player</h3>
-    <div class="form-group"><label for="playerName">Name</label><input id="playerName" class="field" maxlength="70" required autocomplete="off"></div>
-    <div class="form-group"><label for="playerPhone">Phone number (optional in testing)</label><input id="playerPhone" class="field" inputmode="tel" type="tel" placeholder="(585) 555-0123" autocomplete="off"></div>
+    <div class="form-group"><label for="playerName">Name</label><input id="playerName" class="field" maxlength="70" required autocomplete="name"></div>
+    <div class="form-group"><label for="playerPhone">Phone number (optional in testing)</label><input id="playerPhone" class="field" inputmode="tel" type="tel" placeholder="(585) 555-0123" autocomplete="tel"></div>
+    <div class="row-actions">
+      <button class="btn light" type="button" data-action="choose-contact">Choose from Contacts</button>
+      <label class="btn" for="contactFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import contact card (.vcf)</label>
+      <input type="file" id="contactFile" accept=".vcf,text/vcard,text/x-vcard" style="display:none">
+    </div>
+    <p id="contactHelp" class="tiny">iPhone: tap the Name field, then AutoFill Contact → Other Contact above the keyboard. Check the details before saving. If AutoFill is unavailable, import a shared .vcf contact card.</p>
     <label class="option"><input type="checkbox" id="playerRegular"> Regular: pre-fill as confirmed each new game</label>
     <label class="option"><input type="checkbox" id="playerActive" checked> Active: show in invite list</label>
     <p class="tiny">Phone numbers stay in your browser, not in the public GitHub source code.</p>
@@ -176,7 +182,7 @@
       +'<button class="arrow" data-action="down" data-id="'+esc(p.id)+'" '+(i===state.players.length-1?"disabled":"")+' aria-label="Move '+esc(p.name)+' down">↓</button></div>'
       +'<div class="player-info"><div class="player-name">'+esc(p.name)+'</div><div class="player-caption">'+(p.regular?"Regular · ":"")+(p.active?"Active":"Inactive")+' · '+(p.phone?"Phone saved":"No phone")+'</div></div>'
       +'<div class="player-acts">'+miniButton("Edit","edit",p.id)+miniButton(p.active?"Deactivate":"Activate","toggle",p.id)+'</div></div>'}).join("");
-    return '<section class="section"><div class="section-head"><div><h2>Player priority</h2><div class="sub">Top of the list gets first consideration.</div></div><button class="btn primary" data-action="add-player">+ Add player</button></div>'
+    return '<section class="section"><div class="section-head"><div><h2>Player priority</h2><div class="sub">Top of the list gets first consideration.</div></div><div class="btnrow" style="margin:0"><button class="btn" data-action="contact-player">From Contacts</button><button class="btn primary" data-action="add-player">+ Add player</button></div></div>'
       +'<div class="players">'+rows+'</div><div class="notice neutral">Tap ↑ or ↓ to reorder. Deactivating keeps a player’s history. Edit a player to change their name, phone number, or regular status.</div>'
       +'<p class="tiny">Remove a player from the roster entirely using the Delete button inside Edit. Historical stats for a deleted player are no longer shown.</p></section>';
   }
@@ -220,9 +226,66 @@
     document.getElementById("playerPhone").value=p?p.phone:"";
     document.getElementById("playerRegular").checked=p?!!p.regular:false;
     document.getElementById("playerActive").checked=p?!!p.active:true;
+    document.getElementById("contactHelp").textContent="iPhone: tap the Name field, then AutoFill Contact → Other Contact above the keyboard. If AutoFill is unavailable here, import a .vcf contact card.";
     var old=document.getElementById("deletePlayer");if(old)old.remove();
     if(p){var b=document.createElement("button");b.id="deletePlayer";b.type="button";b.className="btn danger";b.textContent="Delete player";b.dataset.action="delete-player";document.getElementById("playerForm").querySelector(".btnrow").prepend(b)}
     document.getElementById("playerDialog").showModal();
+  }
+  function chooseContact(){
+    // The native Web Contact Picker works in some browsers, but not iPhone Safari.
+    if(navigator.contacts&&typeof navigator.contacts.select==="function"){
+      navigator.contacts.select(["name","tel"],{multiple:false}).then(function(selected){
+        if(!selected||!selected.length)return;
+        var c=selected[0];
+        document.getElementById("playerName").value=(c.name&&c.name[0])||"";
+        document.getElementById("playerPhone").value=(c.tel&&c.tel[0])||"";
+        document.getElementById("contactHelp").textContent="Contact selected. Verify the name and number, then tap Save player.";
+      }).catch(function(){
+        document.getElementById("contactHelp").textContent="Contact picker unavailable. Tap Name and use AutoFill Contact → Other Contact, or import a .vcf card.";
+        document.getElementById("playerName").focus();
+      });
+    }else{
+      document.getElementById("contactHelp").textContent="Tap the Name field, then AutoFill Contact above the iPhone keyboard → Other Contact. Choose a person and check the number. If the menu isn't shown in the Home Screen app, import a .vcf contact card.";
+      document.getElementById("playerName").focus();
+    }
+  }
+  function parseVcards(src){
+    function dec(s){return s.replace(/\\n/gi," ").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\").trim()}
+    var raw=src.replace(/\r\n[ \t]/g,"").replace(/\n[ \t]/g,"");
+    return raw.split(/BEGIN:VCARD/i).slice(1).map(function(card){
+      var lines=card.split(/END:VCARD/i)[0].split(/\r?\n/),name="",phone="";
+      lines.forEach(function(line){
+        if(/^FN(?:;[^:]*)?:/i.test(line)&&!name)name=dec(line.slice(line.indexOf(":")+1));
+        if(/^TEL(?:;[^:]*)?:/i.test(line)&&!phone)phone=dec(line.slice(line.indexOf(":")+1)).replace(/^tel:/i,"");
+      });
+      if(!name){var n=lines.find(function(line){return /^N(?:;[^:]*)?:/i.test(line)});if(n){var v=n.slice(n.indexOf(":")+1).split(";");name=dec([v[1]||"",v[0]||""].join(" ").trim())}}
+      return {name:name,phone:phone};
+    }).filter(function(c){return !!c.name});
+  }
+  function importVcard(file){
+    if(!file)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var items=parseVcards(String(rd.result||""));
+      if(!items.length){alert("No contact names were found in this .vcf file.");return}
+      if(items.length===1){
+        document.getElementById("playerName").value=items[0].name;
+        document.getElementById("playerPhone").value=items[0].phone;
+        document.getElementById("contactHelp").textContent="Contact loaded. Check the details, then tap Save player.";
+        return;
+      }
+      if(!confirm("Import "+items.length+" contacts into the player list? No text messages will be sent."))return;
+      var added=0,skipped=0;
+      items.forEach(function(c){
+        var norm=c.phone.replace(/\D/g,"");
+        if(norm && state.players.some(function(p){return p.phone.replace(/\D/g,"")===norm})){skipped++;return}
+        state.players.push({id:id(),name:c.name,phone:c.phone,regular:false,active:true});added++;
+      });
+      save();document.getElementById("playerDialog").close();changeView("players");
+      alert("Imported "+added+" players"+(skipped?" ("+skipped+" duplicates skipped)":"")+".");
+    };
+    rd.onerror=function(){alert("Unable to read the contact card.")};
+    rd.readAsText(file);
   }
   function openInvite(pid,followup){
     var p=player(pid);if(!p)return;
@@ -257,6 +320,8 @@
     if(a==="go-settings")changeView("settings");
     if(a==="go-players")changeView("players");
     if(a==="add-player")openPlayer(null);
+    if(a==="contact-player"){openPlayer(null);chooseContact()}
+    if(a==="choose-contact")chooseContact();
     if(a==="edit")openPlayer(pid);
     if(a==="close-player")document.getElementById("playerDialog").close();
     if(a==="close-invite")document.getElementById("inviteDialog").close();
@@ -295,6 +360,7 @@
     else{state.players.push({id:id(),name:name,phone:phone,regular:document.getElementById("playerRegular").checked,active:document.getElementById("playerActive").checked})}
     document.getElementById("playerDialog").close();save();render();
   });
+  document.getElementById("contactFile").addEventListener("change",function(ev){var f=ev.target.files&&ev.target.files[0];if(f)importVcard(f);ev.target.value=""});
   document.addEventListener("visibilitychange",function(){if(!document.hidden&&(view==="game"||view==="stats"))render()});
   setInterval(function(){if(!document.hidden&&(view==="game"||view==="stats"))render()},60000);
   document.addEventListener("input",function(ev){if(ev.target.id==="template" || ev.target.id==="gameDate" || ev.target.id==="gameTime"){var g=game(),date=document.getElementById("gameDate").value||g.date,time=document.getElementById("gameTime").value||g.time,tmpl=document.getElementById("template").value;var sample=tmpl.replace(/\{day\}/gi,dayName(date)).replace(/\{time\}/gi,friendlyTime(time)).replace(/\{date\}/gi,longDate(date));document.getElementById("messagePreview").textContent=sample}});
