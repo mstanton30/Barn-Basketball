@@ -297,20 +297,35 @@
   function openInvite(pid,followup){
     var p=player(pid);if(!p)return;
     if(!followup && occupied(game())>=game().capacity){alert("Your roster is full when pending invitations are counted. Resolve one first.");return}
+    var draft=readDraft();
+    if(draft && (draft.pid!==pid||draft.gameId!==game().id||!!draft.followup!==!!followup)){
+      if(!confirm("You have another unconfirmed invitation. Discard that draft?"))return;
+      draft=null;
+    }
+    if(!draft)draft={pid:pid,gameId:game().id,followup:!!followup,attempted:false};
+    writeDraft(draft);
     invitingPlayer=pid;
     document.getElementById("inviteTitle").textContent=(followup?"Follow up with ":"Invite ")+p.name;
-    document.getElementById("inviteHelp").textContent=p.phone?"Send an individual text to "+p.name+".":"No phone number saved for "+p.name+". You can copy the message or add a phone number in Players.";
-    document.getElementById("inviteMessage").textContent=followup?"Just following up — "+message():message();
-    document.getElementById("openMessages").disabled=!p.phone;
-    document.querySelector('[data-action="sent-invite"]').style.display=followup?"none":"";
+    document.getElementById("inviteHelp").textContent=p.phone?"Send an individual text to "+p.name+".":"No number saved for "+p.name+". Add one under Players to open an addressed message.";
+    var body=followup?"Just following up — "+message():message();
+    document.getElementById("inviteMessage").textContent=body;
+    var send=document.getElementById("openMessages"),plain=document.getElementById("openPlainMessages"),hasPhone=!!p.phone;
+    send.href=hasPhone?smsHref(p.phone,body):"sms:";
+    plain.href=hasPhone?"sms:"+p.phone.replace(/[^\d+]/g,""):"sms:";
+    send.classList.toggle("disabled",!hasPhone);plain.classList.toggle("disabled",!hasPhone);
+    send.setAttribute("aria-disabled",String(!hasPhone));plain.setAttribute("aria-disabled",String(!hasPhone));
+    document.getElementById("confirmSent").disabled=!attempted();
+    document.getElementById("confirmSent").style.display=followup?"none":"";
     document.getElementById("inviteDialog").showModal();
   }
   function markSent(){
     if(!invitingPlayer)return;
+    if(!attempted()){alert("Open Messages or copy the text, tap Send in Messages, then confirm here.");return}
+    if(!confirm("Did you really tap Send in Messages? Choose Cancel if you only opened a draft."))return;
     var g=game(),old=entry(g,invitingPlayer);
     if(occupied(g)>=g.capacity && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
     g.roster[invitingPlayer]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
-    g.finished=false;save();document.getElementById("inviteDialog").close();render();
+    g.finished=false;writeDraft(null);save();document.getElementById("inviteDialog").close();render();
   }
   function smsHref(phone,msg){return "sms:"+phone.replace(/[^\d+]/g,"")+"&body="+encodeURIComponent(msg)}
   function copyText(msg){if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(msg).then(function(){alert("Text copied.")}).catch(function(){fallbackCopy(msg)})}else fallbackCopy(msg)}
