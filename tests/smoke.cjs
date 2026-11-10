@@ -5,7 +5,7 @@ assert.ok(src);new vm.Script(src);
 assert.ok(html.includes('autocomplete="name"'));assert.ok(html.includes('autocomplete="tel"'));
 const memory={},nodes={},events={},alerts=[];
 const node=id=>nodes[id]||(nodes[id]={
-  textContent:"",innerHTML:"",style:{},value:"",checked:false,focused:false,
+  textContent:"",innerHTML:"",style:{},classList:{toggle(){}},setAttribute(){},value:"",checked:false,disabled:false,focused:false,
   focus(){this.focused=true},remove(){},
   showModal(){this.open=true},close(){this.open=false},
   addEventListener(type,cb){events["node:"+id+":"+type]=cb},
@@ -18,10 +18,10 @@ const doc={
   body:{appendChild(){}}
 };
 const ctx={
-  document:doc,window:{scrollTo(){},isSecureContext:false},
-  localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v}},
+  document:doc,window:{scrollTo(){},isSecureContext:true},
+  localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v},removeItem(k){delete memory[k]}},
   alert(m){alerts.push(m)},confirm(){return true},prompt(){return "no"},
-  navigator:{},URL,Date,Math,JSON,Object,String,Number,Array,RegExp,Blob,console,
+  navigator:{clipboard:{writeText(){return Promise.resolve()}}},URL,Date,Math,JSON,Object,String,Number,Array,RegExp,Blob,console,
   setTimeout(){},clearTimeout(){},setInterval(){},
   FileReader:class {readAsText(file){this.result=file.content;this.onload()}}
 };
@@ -37,15 +37,26 @@ assert.equal(Object.values(g.roster).filter(e=>e.status==="yes").length,3);
 assert.ok(node("content").innerHTML.includes("3</strong><small>Open spots"));
 click("invite","starter-3");
 assert.equal(get().games[0].roster["starter-3"],undefined);
+assert.equal(node("confirmSent").disabled,true,"Must not confirm before attempting Messages");
+click("sent-invite");
+assert.equal(get().games[0].roster["starter-3"],undefined,"Button cannot fake a sent SMS");
+click("copy-invite");
+assert.equal(node("confirmSent").disabled,false,"After copying, allow explicit manual send confirmation");
+assert.equal(JSON.parse(memory["barn-basketball-unsent-draft-v1"]).attempted,true);
 click("sent-invite");
 assert.equal(get().games[0].roster["starter-3"].status,"pending");
+assert.equal(memory["barn-basketball-unsent-draft-v1"],undefined);
 click("yes","starter-3");
-click("invite","starter-4");click("sent-invite");click("no","starter-4");
-click("invite","starter-5");click("sent-invite");
+click("invite","starter-4");click("copy-invite");click("sent-invite");click("no","starter-4");
+click("invite","starter-5");click("copy-invite");click("sent-invite");
 g=get().games[0];
 assert.equal(g.roster["starter-3"].status,"yes");
 assert.equal(g.roster["starter-4"].status,"no");
 assert.equal(g.roster["starter-5"].status,"pending");
+click("not-sent","starter-5");
+assert.equal(get().games[0].roster["starter-5"].status,"not invited","False sent invitation can be corrected");
+click("invite","starter-5");click("copy-invite");click("sent-invite");
+assert.equal(get().games[0].roster["starter-5"].status,"pending");
 // Past date guarantees the three-hour cutoff has passed.
 tab("settings");
 const past=new Date(Date.now()-2*86400000);
@@ -72,10 +83,18 @@ assert.equal(node("playerPhone").value,"+15855550123");
 node("playerRegular").checked=false;node("playerActive").checked=true;
 events["node:playerForm:submit"]({preventDefault(){}});
 assert.ok(get().players.some(p=>p.name==="Pat Smith"&&p.phone==="+15855550123"));
+const pat=get().players.find(p=>p.name==="Pat Smith");
+tab("game");click("invite",pat.id);
+assert.ok(node("openMessages").href.startsWith("sms:+15855550123&body="),"SMS link should be addressed and have text");
+assert.equal(node("openPlainMessages").href,"sms:+15855550123");
+click("open-messages");assert.equal(node("confirmSent").disabled,false);
+assert.equal(get().games[0].roster[pat.id],undefined,"Opening Messages does not mark invitation as sent");
+click("sent-invite");
+assert.equal(get().games[0].roster[pat.id].status,"pending","Explicit user confirmation logs sent invitation");
 // A new game preserves earlier RSVPs and attendance history.
 click("new-game");
 s=get();assert.equal(s.games.length,2);
 assert.equal(s.games[0].roster["starter-3"].status,"yes");
 assert.equal(s.games[0].roster["starter-4"].status,"no");
 assert.equal(Object.values(s.games[1].roster).filter(e=>e.status==="yes").length,3);
-console.log("PASS: startup, SMS draft workflow, Yes/No/No-show, 3-hour auto attendance, corrections, iPhone contact helper, vCard import, history");
+console.log("PASS: guarded SMS workflow, direct link, sent confirmation, not-sent correction, 3-hour attendance, vCard, history");
