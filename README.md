@@ -27,3 +27,12 @@ In Players, tap **From Contacts**. On iPhone, tap the **Name** field; Safari can
 ## Automatic attendance
 
 The app uses the game's local date and time on the device. From 3 hours after game start, all **Yes** (including regulars) count as Played unless marked No-show. **No** and Pending never count. No-show corrections are allowed afterward. The calculation happens on viewing the app, without a background service.
+
+## Sending an invitation safely
+
+1. Tap Invite for someone with a saved phone number.
+2. Tap **Open Messages**, review the recipient and invitation text, and press the **blue Send arrow** in Messages. The app uses a direct `sms:` link. iOS may not always prefill message text; if so, use **Copy invitation** and **Open Messages without text**, then paste and send manually.
+3. Return to Barn Basketball and tap **I tapped Send in Messages** to record the pending invitation. This button is disabled until you try to open Messages or copy the invitation. The app **cannot automatically verify** that the SMS was sent.
+4. If you accidentally marked one pending without really sending it, tap **Not sent** next to the player to release the spot and try again. An unconfirmed draft is preserved on this device so you can resume it if the web app restarts.
+
+No text message can be sent directly by this app without manually pressing Send in Messages.
