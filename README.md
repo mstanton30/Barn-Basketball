@@ -50,3 +50,16 @@ When **all roster spots are confirmed**, Game displays **Send reminders** and **
 - An `.ics` event contains only the game date/time and a link to the app, **no phone numbers**.
 
 There are no SMS-service fees.
+
+## Approved dashboard redesign
+
+The app now uses the navy, white and orange design chosen from the user's mockup:
+
+- Upright two-line **BARN / BASKETBALL** wordmark and orange basketball art.
+- Faint court-line watermark in the navy background throughout the app.
+- Dark Next Game card with the same hoop photo crop featured in the approved mockup, dynamic date/time and an orange confirmed-players progress bar.
+- Solid orange one-tap invite button, white player status snapshot with **no priority subtitles**, and four-icon bottom navigation.
+- Players, Stats and Settings share the dark background, white cards and orange highlight styling.
+- Full invitation controls remain available by opening **Manage all invitations** beneath the snapshot; editing, SMS, historical games, reminders, settings and local storage retain their existing behavior.
+
+This is a visual update; the local browser storage key and saved data model have not changed.
