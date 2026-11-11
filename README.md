@@ -36,3 +36,26 @@ The app uses the game's local date and time on the device. From 3 hours after ga
 4. If you accidentally marked one pending without really sending it, tap **Not sent** next to the player to release the spot and try again. An unconfirmed draft is preserved on this device so you can resume it if the web app restarts.
 
 No text message can be sent directly by this app without manually pressing Send in Messages.
+
+## Invite Open Spots (one-by-one from your own number)
+
+Tap **Invite Open Spots** on Game. The app selects only as many eligible people as there are open slots, in priority order, skipping those already confirmed, pending, declined, or withdrawn. It excludes people with no saved phone number. Even if the capacity is 6, three confirmed regulars leave only 3 invitations to prepare. For each person:
+
+1. Tap **Open Messages**, verify the recipient, and press **Send** on your iPhone.
+2. Return to Barn Basketball and confirm you really sent it.
+3. The app automatically moves to the next eligible individual draft. A series can be paused/resumed from Game.
+
+A pending invitation reserves a spot; this feature does not mass-text or silently send SMS.
+
+## Night-before reminders (no SMS service)
+
+When **all roster spots are confirmed**, Game displays **Send reminders** and **Add iPhone Calendar alert**.
+
+- Set the alert time (default 7:00 PM the night before) and editable reminder wording in Settings.
+- **Send reminders** runs through each confirmed player with a phone number, one individual message at a time. You still press Send in Messages. Reminder status is tracked for the selected game to avoid accidental duplicates.
+- **Add iPhone Calendar alert** downloads an `.ics` event for the evening before your game, containing a notification at the event's start. Open it from your iPhone Downloads or Files and **add** it to Calendar. Verify the event's Alert is enabled and iPhone Calendar notifications are permitted.
+- Importing the calendar event is a required manual step: GitHub Pages cannot create an unattended iPhone notification while the app is closed. Once added, Calendar handles the alert without leaving Barn Basketball open.
+- If a saved game time or date changes, update/replace the Calendar event manually. Don't import multiple copies for one game.
+- An `.ics` event contains only the game date/time and a link to the app, **no phone numbers**.
+
+There are no SMS-service fees.
