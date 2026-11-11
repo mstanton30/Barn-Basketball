@@ -140,10 +140,17 @@ assert.ok(prevented>previous,"A duplicate or over-capacity send must be prevente
 click("yes","starter-4");click("yes","starter-5");
 tab("game");
 assert.equal((node("content").innerHTML.match(/class="snapshot-row"/g)||[]).length,6,"All six confirmed players display, not just four");
+assert.ok(node("content").innerHTML.includes('data-roster-count="6"'),"Dashboard explicitly reports all six responses");
+
 click("no","starter-5");
 tab("game");
 assert.ok(node("content").innerHTML.includes('snapshot-name">Steve</span>'),"Declined player remains in dashboard");
 assert.ok(node("content").innerHTML.includes('>Declined</span>'),"Dashboard shows decline status");
+const rosterHtml=node("content").innerHTML;
+assert.ok(rosterHtml.indexOf('snapshot-name">Mike</span>')<rosterHtml.indexOf('snapshot-name">Steve</span>'),"Confirmed players sort above declined players");
+assert.ok(rosterHtml.indexOf('snapshot-name">John</span>')<rosterHtml.indexOf('snapshot-name">Steve</span>'),"Declined player is last");
+assert.ok(rosterHtml.includes('data-roster-count="6"'),"Declined invitees remain in complete dashboard");
+
 click("yes","starter-5");
 
 assert.equal(Object.values(get().games[0].roster).filter(e=>e.status==="yes").length,6);
