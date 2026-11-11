@@ -2,9 +2,9 @@
 
 A private-use, phone-friendly organizer for weekend basketball at the barn. Hosted as a **static website** on GitHub Pages. No backend or sign-in required.
 
-## Test setup
+## Live app setup
 - Mike, Drake, and Christopher begin as regular, preconfirmed players.
-- John, Dave, and Steve are sample invitees (no real phone numbers).
+- New installs start with those three regulars only; add other players from Contacts or manually. Existing installs retain all saved players.
 - Default game is the next Saturday at 10:00 AM, six total spots.
 - Edit players, phone numbers, priority, date, time, roster size, and invitation template.
 - Tapping an SMS link immediately records the invitation as Pending to reserve a spot; a pending invite counts against six. The app cannot detect whether Messages actually sent it.
@@ -14,11 +14,11 @@ A private-use, phone-friendly organizer for weekend basketball at the barn. Host
 - Players can be added from iPhone contact AutoFill in Safari, through native Contact Picker on supporting browsers, or by importing a contact card (.vcf). Safari on iPhone does not support the native Contact Picker API.
 - Data stays in the browser via localStorage. Backups can be exported/imported in Settings.
 
-## Publishing
-On GitHub select **Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**. Once deployment completes, visit `https://mstanton30.github.io/Barn-Basketball/`.
+## Live website
+The public website is deployed from the `main` branch at `https://mstanton30.github.io/Barn-Basketball/`. Updates to code do not sync browser-local player data.
 
 ## Privacy
-The repository contains sample names only and no real phone numbers. Anything entered in the app is kept in that device/browser, not committed to the public GitHub repository. On a shared device, anyone with that browser profile can see the data. Export a backup before clearing browser storage.
+The repository contains starter first names but no real phone numbers. Anything entered in the app is kept in that device/browser, not committed to the public GitHub repository. On a shared device, anyone with that browser profile can see the data. Export a backup before clearing browser storage.
 
 ## Adding an iPhone contact
 
@@ -63,3 +63,11 @@ The app now uses the navy, white and orange design chosen from the user's mockup
 - Full invitation controls remain available by opening **Manage all invitations** beneath the snapshot; editing, SMS, historical games, reminders, settings and local storage retain their existing behavior.
 
 This is a visual update; the local browser storage key and saved data model have not changed.
+
+## Production launch: response reset and history preservation
+- On the first opening of this version, only the **current game's** previous invitation/response statuses are cleared. Active regular players remain confirmed. The date/time, names, phone numbers, priority order, and earlier games stay unchanged.
+- The cleanup runs **once** per device's stored data. Reopening the app does not clear new invitations.
+- **Declined** shows only when that game's record includes an actual invitation (invitedAt) followed by No. An old No without an invitation shows **Not invited**.
+- Settings includes **Clear current game invitations** to intentionally start over without erasing contacts or older games.
+- Imported backups are excluded from the one-time cleanup, to avoid silently discarding their recorded responses.
+- Data is stored only in this browser, not synced. The app does not verify whether iPhone Messages actually sent a text. Export a backup before deleting browser data or moving devices.
