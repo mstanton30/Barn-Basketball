@@ -1,7 +1,7 @@
 name: Test Barn Basketball
 on:
   push:
-    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation]
+    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation, feature/batch-invites-calendar-reminders]
   workflow_dispatch:
 permissions:
   contents: read
