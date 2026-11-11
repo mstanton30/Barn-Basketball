@@ -163,7 +163,7 @@
     var seg="";for(var i=0;i<g.capacity;i++)seg+='<span class="'+(i<yes?"yes":i<yes+pending?"pending":"")+'"></span>';
     return '<div class="card"><div class="game-top"><div><div class="eyebrow">Upcoming game</div><div class="game-date">'+esc(longDate(g.date))+'</div><div class="game-time">'+esc(friendlyTime(g.time))+' · '+(g.capacity===6?"3-on-3":g.capacity===8?"4-on-4":g.capacity+" players")+'</div></div><span class="status-pill">'+(afterDeadline(g)?"Attendance counted":Date.now()>=gameStart(g)?"Game in progress":"Planning")+'</span></div>'
       +'<div class="meter" aria-label="'+yes+' confirmed, '+pending+' pending, '+free+' open">'+seg+'</div><div class="stats-tiles"><div class="tile good"><strong>'+yes+'</strong><small>Confirmed</small></div><div class="tile wait"><strong>'+pending+'</strong><small>Pending</small></div><div class="tile"><strong>'+free+'</strong><small>Open spots</small></div></div>'
-      +'<div class="row-actions">'+miniButton("Edit game","go-settings","","") + miniButton("Review no-shows","attendance","","")+miniButton("Next game","new-game","","")+'</div>'
+      +'<div class="row-actions">'+(free?miniButton("Invite Open Spots ("+free+")","batch-invite","","orange"):'')+(fullRoster(g)?miniButton("Send reminders","batch-reminder","","green"):'')+miniButton("Edit game","go-settings","","") + miniButton("Review no-shows","attendance","","")+miniButton("Next game","new-game","","")+'</div>'
       +'<div class="notice neutral">Pending invites reserve spots, so you never accidentally invite a seventh person. A 12-hour-old invite is flagged, not automatically canceled.</div></div>';
   }
   function gamePlayerRow(p,index,g){
@@ -195,6 +195,15 @@
     if(draft&&draft.gameId===g.id&&player(draft.pid)&&(!entry(g,draft.pid)||entry(g,draft.pid).status!=="pending")){
       left+='<div class="card"><div class="eyebrow">Unconfirmed invitation</div><p class="info-line">Draft for <strong>'+esc(player(draft.pid).name)+'</strong> has not been confirmed as sent. Return to the invitation or discard it.</p><div class="btnrow">'+miniButton("Continue invitation","resume-invite",draft.pid,"orange")+miniButton("Discard draft","discard-draft",draft.pid)+'</div></div>';
     }
+    var batch=readBatch();
+    if(batch && batch.gameId===g.id && batch.ids.length){
+      var current=player(batch.ids[0]);
+      left+='<div class="card"><div class="eyebrow">'+(batch.type==="invite"?"Invitation series":"Reminder series")+'</div><p class="info-line"><strong>'+batch.ids.length+' text(s) left</strong>'+(current?" · Next: "+esc(current.name):"")+'. Each text opens individually and still requires you to tap Send.</p><div class="row-actions">'+miniButton("Continue","continue-batch","","orange")+miniButton("Stop series","cancel-batch","","")+'</div></div>';
+    }
+    if(fullRoster(g)){
+      var alertHour=state.settings.reminderTime||"19:00";
+      left+='<div class="card"><div class="eyebrow">Night-before reminder</div><div class="game-time">Reminder time: '+esc(friendlyTime(alertHour))+' the night before · '+esc(longDate(g.date))+' game</div><p class="info-line">Add a Calendar alert once for this game. Your iPhone Calendar can notify you while this app is closed. It will not send texts automatically.</p><div class="row-actions">'+miniButton("Add iPhone Calendar alert","calendar-reminder","","primary")+miniButton("Edit reminder time","go-settings","","")+'</div></div>';
+    }
     if(overdue.length)left+='<div class="notice">'+overdue.length+' invitation(s) are over 12 hours old. Follow up, record a response, or withdraw before inviting someone else.</div>';
     return '<div class="main-grid"><div>'+left+'</div><div>'+section+'</div></div>';
   }
@@ -221,6 +230,11 @@
       +'<div class="form-group"><label for="capacity">Number of players</label><select id="capacity" class="field"><option value="6" '+(g.capacity===6?"selected":"")+'>6 players · 3-on-3</option><option value="8" '+(g.capacity===8?"selected":"")+'>8 players · 4-on-4</option></select></div>'
       +'<div class="form-group"><label for="template">Default invitation message</label><textarea id="template" class="field">'+esc(state.settings.template)+'</textarea><div class="tiny">Use {day}, {time}, and {date} so your invitation updates automatically.</div></div>'
       +'<label>Text preview</label><div class="preview" id="messagePreview">'+esc(message())+'</div>'
+      +'<div class="section-head" style="margin-top:20px"><h2>Night-before reminder</h2></div>'
+      +'<div class="form-group"><label for="reminderTime">Alert time (night before)</label><input class="field" type="time" id="reminderTime" value="'+esc(state.settings.reminderTime||"19:00")+'"></div>'
+      +'<div class="form-group"><label for="reminderTemplate">Reminder message</label><textarea class="field" id="reminderTemplate">'+esc(state.settings.reminderTemplate||"")+'</textarea><div class="tiny">Uses {day}, {date}, and {time}. These will be the game date and time, not the alert time.</div></div>'
+      +'<label>Reminder preview</label><div class="preview">'+esc(reminderMessage(g))+'</div>'
+      +'<div class="notice neutral">When all players confirm, tap Add iPhone Calendar alert on the Game tab and import the calendar event. iPhone Calendar will notify you at your chosen time. Editing the game later does not change an already imported event; replace it in Calendar.</div>'
       +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
       +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
       +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
@@ -388,16 +402,16 @@
     if(a==="change-response"){var chosen=prompt("Change "+p.name+"'s status to yes, no, withdrawn, or not invited:", "no");if(chosen){chosen=chosen.trim().toLowerCase();if(["yes","no","withdrawn"].includes(chosen))setResponse(pid,chosen);else if(chosen==="not invited")setResponse(pid,"not invited");else alert("No changes made.")}}
     if(a==="attendance")attendance();
     if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e){e.noShow=!!input.checked;e.attended=!e.noShow}});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
-    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
+    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);writeBatch(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
     if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
     if(a==="save-settings"){
-      var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim();
-      if(!date||!time||!tmpl){alert("Please enter a date, time and message.");return}
+      var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim(),rtime=document.getElementById("reminderTime").value,rtemplate=document.getElementById("reminderTemplate").value.trim();
+      if(!date||!time||!tmpl||!rtime||!rtemplate){alert("Please enter the game and reminder times and messages.");return}
       if(cap<occupied(g)){alert("You already have "+occupied(g)+" confirmed or pending. Resolve invitations before lowering the roster limit.");return}
-      g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;save();render();alert("Game and message saved.")
+      g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;state.settings.reminderTime=rtime;state.settings.reminderTemplate=rtemplate;save();render();alert("Game and message saved.")
     }
     if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
-    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();writeDraft(null);save();changeView("game")}}
+    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();writeDraft(null);writeBatch(null);save();changeView("game")}}
   });
   document.getElementById("playerForm").addEventListener("submit",function(ev){ev.preventDefault();var name=document.getElementById("playerName").value.trim(),phone=document.getElementById("playerPhone").value.trim();if(!name)return;
     if(editingPlayer){var p=player(editingPlayer);p.name=name;p.phone=phone;p.regular=document.getElementById("playerRegular").checked;p.active=document.getElementById("playerActive").checked}
