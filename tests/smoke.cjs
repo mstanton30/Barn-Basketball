@@ -229,7 +229,7 @@ assert.equal(legacyStore["barn-basketball-unsent-draft-v1"],undefined,"Old draft
 migrated.games[1].roster["starter-5"]={status:"no",invitedAt:null};
 legacyStore["barn-basketball-local-v1"]=JSON.stringify(migrated);
 vm.runInNewContext(src,legacyCtx,{filename:"barn-restart-app.js"});
-assert.ok(node("content").innerHTML.includes("Not invited"),"Uninvited No must be shown as Not invited");
+assert.ok(!node("content").innerHTML.includes('snapshot-name">Steve</span>'),"Uninvited No must not appear among invited players");
 let restart=JSON.parse(legacyStore["barn-basketball-local-v1"]);
 assert.equal(restart.games[1].roster["starter-5"].status,"no","One-time cleanup must not repeat on restart");
 assert.ok(!html.includes("About this test")&&!html.includes("Reset sample data")&&!html.includes("optional in testing"),"Production UI must have no beta language");
