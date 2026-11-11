@@ -161,13 +161,20 @@ dialog .tiny{color:#687f91}
 @media(min-width:720px){.body{max-width:760px;padding:0 24px 120px}.mast{padding-top:30px}.mast .shell{max-width:760px}.brand h1 span:first-child{font-size:49px}.brand h1 span:last-child{font-size:28px}.hero-copy{height:177px;padding:28px}.hero-picture{height:190px}.hero-progress{margin:0 26px 22px}.main-grid{display:block}.mast-row{justify-content:center}}
 @media(max-width:470px){.brand h1 span:first-child{font-size:39px}.brand h1 span:last-child{font-size:21px}.body{padding-left:13px;padding-right:13px}.hero-copy-title{font-size:20px}.hero-event{font-size:14px}.hero-copy{padding-left:14px}.hero-progress{margin-left:12px;margin-right:12px}.feature-cta a,.feature-cta button{font-size:18px}.player{align-items:center}.player-acts{max-width:160px}.tab{font-size:11px}.section-head h2{font-size:18px}.status-pill{white-space:normal;text-align:center}}
 
+
+/* Fixes: match real basketball seams and ensure hoop image paints reliably. */
+.header-ball{display:block;width:110px;height:50px;overflow:visible;flex-shrink:0}
+.hero-picture{position:absolute;inset:0 0 auto auto;display:block;height:157px;width:58%;object-fit:cover;object-position:center center;z-index:0;background:none}
+.hero-picture-overlay{position:absolute;right:0;top:0;width:58%;height:157px;z-index:0;pointer-events:none;background:linear-gradient(90deg,#06192e 0%,#06192ec9 18%,#06192e39 65%,#06192e14 100%)}
+@media(min-width:720px){.hero-picture,.hero-picture-overlay{height:190px}}
+
 </style>
 </head>
 <body>
 <header class="mast">
   <div class="shell mast-row">
     <div class="brand" aria-label="Barn Basketball">
-      <svg class="header-ball" viewBox="0 0 150 70" aria-hidden="true"><defs><clipPath id="ballclip"><rect x="8" y="3" width="134" height="58"/></clipPath></defs><g clip-path="url(#ballclip)" fill="none" stroke="#ff7715" stroke-width="5.5" stroke-linecap="round"><circle cx="75" cy="75" r="63"/><path d="M75 13V110M12 72h126M26 29Q77 31 124 87M124 29Q75 34 26 87"/></g></svg>
+      <svg class="header-ball" viewBox="0 0 144 62" aria-hidden="true"><g fill="none" stroke="#ff7615" stroke-width="4.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 61 A63 63 0 0 1 135 61"/><path d="M72 0V61"/><path d="M31 15 C59 27 60 45 60 61"/><path d="M113 15 C85 27 84 45 84 61"/><path d="M15 51 C50 46 94 46 129 51"/></g></svg>
       <div class="brand-words"><h1><span>BARN</span><span>BASKETBALL</span></h1></div>
     </div>
     <button class="reminder-link" type="button" data-action="go-settings" aria-label="Open reminder settings" title="Reminder settings">
@@ -286,7 +293,7 @@ dialog .tiny{color:#687f91}
     var clockIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg>';
     var peopleIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M16 6a3 3 0 0 1 0 6M17 16a5 5 0 0 1 5 5"/></svg>';
     return '<div class="hero-panel" aria-label="Next basketball game">'
-      +'<div class="hero-picture" aria-hidden="true"></div>'
+      +'<img class="hero-picture" src="barn-hoop-card-v2.jpg?v=4" alt="Barn basketball hoop" decoding="async"><div class="hero-picture-overlay" aria-hidden="true"></div>'
       +'<div class="hero-copy"><div class="hero-copy-title">Next game</div>'
       +'<div class="hero-event">'+dateIcon+'<span>'+esc(longDate(g.date))+'</span></div>'
       +'<div class="hero-event">'+clockIcon+'<span>'+esc(friendlyTime(g.time))+'</span></div></div>'
