@@ -266,7 +266,7 @@ dialog .tiny{color:#687f91}
     var last=readLastInvite();
     if(last&&last.gameId===g.id){
       var e=entry(g,last.pid);
-      return e&&e.status==="pending"&&e.invitedAt===last.invitedAt?last:null;
+      return !last.consumed&&e&&e.status==="pending"&&e.invitedAt===last.invitedAt?last:null;
     }
     // One-time compatibility for invite sequences opened before this update.
     // For new batches the version marker prevents undoing an unrelated pending RSVP.
