@@ -323,20 +323,75 @@
     rd.onerror=function(){alert("Unable to read the contact card.")};
     rd.readAsText(file);
   }
-  function openInvite(pid,followup){
+  function startBatch(kind){
+    var g=game(),list=[];
+    if(kind==="invite"){
+      var free=remaining(g);
+      if(!free){alert("All "+g.capacity+" spots are reserved or confirmed. Resolve pending invitations first.");return}
+      list=state.players.filter(function(p){
+        var e=entry(g,p.id);
+        return p.active && (!e || e.status==="not invited") && !!p.phone;
+      }).slice(0,free);
+    }else{
+      if(!fullRoster(g)){alert("All spots must be confirmed before sending night-before reminders.");return}
+      list=state.players.filter(function(p){
+        var e=entry(g,p.id);
+        return e && e.status==="yes" && !!p.phone && !e.reminderSentAt;
+      });
+    }
+    if(!list.length){
+      alert(kind==="invite"?"No eligible players with phone numbers. Add numbers on the Players tab.":"No unsent reminder recipients with phone numbers. You can add numbers on the Players tab.");
+      return;
+    }
+    var current=readBatch(),draft=readDraft();
+    if((current&&current.ids.length)||draft){
+      if(!confirm("Replace the existing unfinished message series or draft? Nothing will be sent automatically."))return;
+      writeDraft(null);
+    }
+    var skipped=kind==="reminder" ? yesCount(g)-list.length : remaining(g)-list.length;
+    if(!confirm("Prepare "+list.length+" individual "+(kind==="invite"?"invitation":"reminder")+" text(s) in priority order?"+(skipped>0?" "+skipped+" spot(s) have no eligible phone number or are already reminded.":"")+" You must press Send in Messages for each."))return;
+    writeBatch({type:kind,gameId:g.id,ids:list.map(function(p){return p.id})});
+    advanceBatch();
+  }
+  function advanceBatch(){
+    var b=readBatch(),g=game();
+    if(!b)return;
+    if(b.gameId!==g.id){writeBatch(null);return}
+    while(b.ids.length){
+      var p=player(b.ids[0]),e=p?entry(g,p.id):null;
+      var eligible=p&&p.phone&&(b.type==="invite"?
+        remaining(g)>0 && p.active && (!e || e.status==="not invited"):
+        fullRoster(g) && e && e.status==="yes" && !e.reminderSentAt);
+      if(eligible)break;
+      b.ids.shift();
+    }
+    if(!b.ids.length){writeBatch(null);render();alert("Message series complete. Open Stats and Game to review the current status.");return}
+    writeBatch(b);
+    openInvite(b.ids[0],false,b.type);
+  }
+  function afterBatchMessage(pid){
+    var b=readBatch();
+    if(!b||b.gameId!==game().id)return false;
+    b.ids=b.ids.filter(function(x){return x!==pid});
+    if(!b.ids.length){writeBatch(null);return false}
+    writeBatch(b);return true;
+  }
+  function openInvite(pid,followup,kind){
     var p=player(pid);if(!p)return;
-    if(!followup && occupied(game())>=game().capacity){alert("Your roster is full when pending invitations are counted. Resolve one first.");return}
+    var isReminder=kind==="reminder";
+    if(!followup && !isReminder && occupied(game())>=game().capacity){alert("Your roster is full when pending invitations are counted. Resolve one first.");return}
+    if(isReminder&&(!fullRoster(game())||entry(game(),pid)?.status!=="yes")){alert("Reminders are only available for confirmed players once the roster is full.");return}
     var draft=readDraft();
-    if(draft && (draft.pid!==pid||draft.gameId!==game().id||!!draft.followup!==!!followup)){
+    if(draft && (draft.pid!==pid||draft.gameId!==game().id||!!draft.followup!==!!followup||(draft.kind||"invite")!==(kind||"invite"))){
       if(!confirm("You have another unconfirmed invitation. Discard that draft?"))return;
       draft=null;
     }
-    if(!draft)draft={pid:pid,gameId:game().id,followup:!!followup,attempted:false};
+    if(!draft)draft={pid:pid,gameId:game().id,followup:!!followup,kind:isReminder?"reminder":"invite",attempted:false};
     writeDraft(draft);
     invitingPlayer=pid;
-    document.getElementById("inviteTitle").textContent=(followup?"Follow up with ":"Invite ")+p.name;
+    document.getElementById("inviteTitle").textContent=isReminder?"Reminder to "+p.name:(followup?"Follow up with ":"Invite ")+p.name;
     document.getElementById("inviteHelp").textContent=p.phone?"Send an individual text to "+p.name+".":"No number saved for "+p.name+". Add one under Players to open an addressed message.";
-    var body=followup?"Just following up — "+message():message();
+    var body=isReminder?reminderMessage(game()):(followup?"Just following up — "+message():message());
     document.getElementById("inviteMessage").textContent=body;
     var send=document.getElementById("openMessages"),plain=document.getElementById("openPlainMessages"),hasPhone=!!p.phone;
     send.href=hasPhone?smsHref(p.phone,body):"sms:";
@@ -351,10 +406,18 @@
     if(!invitingPlayer)return;
     if(!attempted()){alert("Open Messages or copy the text, tap Send in Messages, then confirm here.");return}
     if(!confirm("Did you really tap Send in Messages? Choose Cancel if you only opened a draft."))return;
-    var g=game(),old=entry(g,invitingPlayer);
-    if(occupied(g)>=g.capacity && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
-    g.roster[invitingPlayer]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
-    g.finished=false;writeDraft(null);save();document.getElementById("inviteDialog").close();render();
+    var g=game(),old=entry(g,invitingPlayer),draft=readDraft(),pid=invitingPlayer;
+    var isReminder=!!(draft&&draft.kind==="reminder");
+    if(isReminder){
+      if(!fullRoster(g)||!old||old.status!=="yes"){alert("This player is no longer confirmed on a full roster; no reminder was recorded.");return}
+      old.reminderSentAt=Date.now();
+    }else{
+      if(occupied(g)>=g.capacity && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
+      g.roster[pid]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
+      g.finished=false;
+    }
+    writeDraft(null);save();document.getElementById("inviteDialog").close();invitingPlayer=null;
+    if(afterBatchMessage(pid)){render();advanceBatch()}else{render()};
   }
   function smsHref(phone,msg){return "sms:"+phone.replace(/[^\d+]/g,"")+"&body="+encodeURIComponent(msg)}
   function copyText(msg){if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(msg).then(function(){alert("Text copied.")}).catch(function(){fallbackCopy(msg)})}else fallbackCopy(msg)}
@@ -383,7 +446,11 @@
     if(a==="delete-player" && editingPlayer){var target=player(editingPlayer);if(confirm("Delete "+target.name+"? Past games remain, but this player disappears from reports.")){state.players=state.players.filter(function(x){return x.id!==editingPlayer});document.getElementById("playerDialog").close();save();render()}}
     if(a==="invite")openInvite(pid,false);
     if(a==="followup")openInvite(pid,true);
-    if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup)}
+    if(a==="batch-invite")startBatch("invite");
+    if(a==="batch-reminder")startBatch("reminder");
+    if(a==="continue-batch")advanceBatch();
+    if(a==="cancel-batch"){if(confirm("Stop this message series? Already confirmed messages stay recorded.")){writeBatch(null);writeDraft(null);render()}}
+    if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup,d.kind||"invite")}
     if(a==="discard-draft"){if(confirm("Discard this unsent invitation draft?")){writeDraft(null);render()}}
     if(a==="not-sent"){if(confirm("Mark this invitation as NOT sent? This clears the pending spot so you can invite them properly.")){
       var e=entry(g,pid);if(e){e.status="not invited";e.invitedAt=null;e.noShow=false;e.attended=false;save();render()}
