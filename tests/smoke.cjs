@@ -73,7 +73,9 @@ assert.equal(Object.values(g.roster).filter(e=>e.status==="yes").length,3);
 assert.ok(node("content").innerHTML.includes("3 open"),"Dashboard shows available slots");
 assert.ok(node("content").innerHTML.includes('class="hero-panel"'),"Next Game hero panel renders");
 assert.ok(node("content").innerHTML.includes('class="snapshot-panel"'),"Player snapshot renders");
-assert.ok(!node("content").innerHTML.includes('snapshot-name">John</span>'),"Uninvited players do not crowd the response dashboard");
+assert.ok(node("content").innerHTML.includes('snapshot-name">John</span>'),"Dashboard includes uninvited players in full roster");
+assert.ok(node("content").innerHTML.includes("Not invited"),"Dashboard labels uninvited players");
+assert.equal((node("content").innerHTML.match(/class="snapshot-row"/g)||[]).length,6,"Dashboard lists all six players");
 
 assert.ok(node("content").innerHTML.includes("Saturday") || node("content").innerHTML.includes("Upcoming"),"Next game data is rendered");
 assert.ok(!node("content").innerHTML.includes("#1 Priority"),"No priority label is shown under player names");
@@ -229,7 +231,8 @@ assert.equal(legacyStore["barn-basketball-unsent-draft-v1"],undefined,"Old draft
 migrated.games[1].roster["starter-5"]={status:"no",invitedAt:null};
 legacyStore["barn-basketball-local-v1"]=JSON.stringify(migrated);
 vm.runInNewContext(src,legacyCtx,{filename:"barn-restart-app.js"});
-assert.ok(!node("content").innerHTML.includes('snapshot-name">Steve</span>'),"Uninvited No must not appear among invited players");
+assert.ok(node("content").innerHTML.includes('snapshot-name">Steve</span>'),"Uninvited player stays on dashboard");
+assert.ok(node("content").innerHTML.includes("Not invited"),"Uninvited No is labeled Not invited");
 let restart=JSON.parse(legacyStore["barn-basketball-local-v1"]);
 assert.equal(restart.games[1].roster["starter-5"].status,"no","One-time cleanup must not repeat on restart");
 assert.ok(!html.includes("About this test")&&!html.includes("Reset sample data")&&!html.includes("optional in testing"),"Production UI must have no beta language");
