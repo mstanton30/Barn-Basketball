@@ -73,6 +73,8 @@ assert.equal(Object.values(g.roster).filter(e=>e.status==="yes").length,3);
 assert.ok(node("content").innerHTML.includes("3 open"),"Dashboard shows available slots");
 assert.ok(node("content").innerHTML.includes('class="hero-panel"'),"Next Game hero panel renders");
 assert.ok(node("content").innerHTML.includes('class="snapshot-panel"'),"Player snapshot renders");
+assert.ok(!node("content").innerHTML.includes('snapshot-name">John</span>'),"Uninvited players do not crowd the response dashboard");
+
 assert.ok(node("content").innerHTML.includes("Saturday") || node("content").innerHTML.includes("Upcoming"),"Next game data is rendered");
 assert.ok(!node("content").innerHTML.includes("#1 Priority"),"No priority label is shown under player names");
 assert.ok(html.includes('court-lines.svg'),"Subtle court watermark asset is referenced");
@@ -99,6 +101,9 @@ click("not-sent","starter-3");
 assert.equal(get().games[0].roster["starter-3"].status,"not invited");
 assert.equal(confirms,0,"Correcting a canceled text should not prompt");
 click("direct-invite","starter-3");click("yes","starter-3");
+tab("game");
+assert.ok(node("content").innerHTML.includes('snapshot-name">John</span>'),"Newly confirmed player appears on dashboard");
+
 // Bulk opens the first individual SMS on the first click; returns to show Next link.
 tab("game");
 assert.ok(node("content").innerHTML.includes('data-action="batch-start-invite"'));
@@ -133,6 +138,14 @@ const previous=prevented;
 click("direct-invite","starter-3");
 assert.ok(prevented>previous,"A duplicate or over-capacity send must be prevented");
 click("yes","starter-4");click("yes","starter-5");
+tab("game");
+assert.equal((node("content").innerHTML.match(/class="snapshot-row"/g)||[]).length,6,"All six confirmed players display, not just four");
+click("no","starter-5");
+tab("game");
+assert.ok(node("content").innerHTML.includes('snapshot-name">Steve</span>'),"Declined player remains in dashboard");
+assert.ok(node("content").innerHTML.includes('>Declined</span>'),"Dashboard shows decline status");
+click("yes","starter-5");
+
 assert.equal(Object.values(get().games[0].roster).filter(e=>e.status==="yes").length,6);
 // Night-before reminder is also one-tap per person, no RSVP changes.
 tab("game");
