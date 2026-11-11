@@ -110,6 +110,10 @@
   var view = "game";
   var editingPlayer = null, invitingPlayer = null;
   var DRAFT_KEY="barn-basketball-unsent-draft-v1";
+  var BATCH_KEY="barn-basketball-batch-v1";
+  function readBatch(){try{var b=JSON.parse(localStorage.getItem(BATCH_KEY));return b&&b.gameId&&Array.isArray(b.ids)&&["invite","reminder"].includes(b.type)?b:null}catch(e){return null}}
+  function writeBatch(b){try{if(b)localStorage.setItem(BATCH_KEY,JSON.stringify(b));else localStorage.removeItem(BATCH_KEY)}catch(e){}}
+
   function readDraft(){try{var d=JSON.parse(localStorage.getItem(DRAFT_KEY));return d&&d.pid&&d.gameId?d:null}catch(e){return null}}
   function writeDraft(d){try{if(d)localStorage.setItem(DRAFT_KEY,JSON.stringify(d));else localStorage.removeItem(DRAFT_KEY)}catch(e){}}
   function attempted(){var d=readDraft();return !!(d&&d.pid===invitingPlayer&&d.gameId===game().id&&d.attempted)}
@@ -122,9 +126,12 @@
     var p=[["Mike",true],["Drake",true],["Christopher",true],["John",false],["Dave",false],["Steve",false]].map(function(a,i){return{id:"starter-"+i,name:a[0],phone:"",regular:a[1],active:true}});
     var g={id:id(),date:nextSaturday(),time:"10:00",capacity:6,roster:{},finished:false,createdAt:Date.now()};
     p.filter(function(x){return x.regular}).forEach(function(x){g.roster[x.id]={status:"yes",invitedAt:null,regular:true,attended:false}});
-    return {version:1,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?"}};
+    return {version:1,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?",reminderTime:"19:00",reminderTemplate:"Reminder: barn basketball is {day}, {date} at {time}. See you there!"}};
   }
-  function migrate(v){v.games.forEach(function(g){if(!g.roster)return;Object.keys(g.roster).forEach(function(pid){var e=g.roster[pid];if(e&&e.status==="yes"&&typeof e.noShow!=="boolean"&&g.finished===true)e.noShow=e.attended===false})});return v}
+  function migrate(v){
+    if(!v.settings.reminderTime)v.settings.reminderTime="19:00";
+    if(!v.settings.reminderTemplate)v.settings.reminderTemplate="Reminder: barn basketball is {day}, {date} at {time}. See you there!";
+    v.games.forEach(function(g){if(!g.roster)return;Object.keys(g.roster).forEach(function(pid){var e=g.roster[pid];if(e&&e.status==="yes"&&typeof e.noShow!=="boolean"&&g.finished===true)e.noShow=e.attended===false})});return v}
   function load(){try{var raw=localStorage.getItem(KEY);if(raw){var v=JSON.parse(raw);if(v && v.version===1 && Array.isArray(v.players) && Array.isArray(v.games) && v.settings && v.games.length)return migrate(v)}}catch(e){}return starter()}
   var state=load();
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert("Could not save to this browser. Check your storage settings.")}}
@@ -143,7 +150,11 @@
   function friendlyTime(hm){if(!hm)return "10 AM";var parts=hm.split(":"),h=Number(parts[0]),m=Number(parts[1]);return ((h%12)||12)+(m?":"+String(m).padStart(2,"0"):"")+(h>=12?" PM":" AM")}
   function dayName(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long"})}
   function longDate(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
-  function message(){var g=game();return state.settings.template.replace(/\{day\}/gi,dayName(g.date)).replace(/\{time\}/gi,friendlyTime(g.time)).replace(/\{date\}/gi,longDate(g.date))}
+  function fillTemplate(template,g){return String(template||"").replace(/\{day\}/gi,dayName(g.date)).replace(/\{time\}/gi,friendlyTime(g.time)).replace(/\{date\}/gi,longDate(g.date))}
+  function message(){return fillTemplate(state.settings.template,game())}
+  function reminderMessage(g){return fillTemplate(state.settings.reminderTemplate,g)}
+  function remaining(g){return Math.max(0,g.capacity-occupied(g))}
+  function fullRoster(g){return yesCount(g)===g.capacity&&pendingCount(g)===0}
   function statusOf(e){if(!e)return "not invited";if(e.status==="pending"&&e.invitedAt&&Date.now()-e.invitedAt>=DAY)return "overdue";return e.status}
   function responseLabel(e){var st=statusOf(e);return st==="yes"?"Confirmed":st==="no"?"Declined":st==="pending"?"Awaiting reply":st==="overdue"?"12h overdue":st==="withdrawn"?"Withdrawn":"Not invited"}
   function miniButton(label,action,pid,cls){return '<button class="btn mini '+(cls||"")+'" data-action="'+action+'" data-id="'+esc(pid)+'">'+label+'</button>'}
