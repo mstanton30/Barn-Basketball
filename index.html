@@ -169,8 +169,8 @@
   function eligibleTextPlayers(g,kind){
     var pool=state.players.filter(function(p){
       var e=entry(g,p.id);
-      if(!p.phone||!p.active)return false;
-      if(kind==="invite")return !e||e.status==="not invited";
+      if(!p.phone)return false;
+      if(kind==="invite")return p.active&&(!e||e.status==="not invited");
       return e&&e.status==="yes"&&!e.reminderSentAt;
     });
     return kind==="invite"?pool.slice(0,remaining(g)):(fullRoster(g)?pool:[]);
@@ -279,7 +279,7 @@
       +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
       +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
       +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
-      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Messages open as individual SMS drafts. You press Send yourself and then mark the invitation as sent here. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
+      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Invites and reminders open directly in Messages, where you press Send yourself. Opening Messages records an invitation as Pending. If you cancel without sending, tap Not sent to release the slot. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
       +'<div class="btnrow"><button class="btn danger" data-action="reset-data">Reset sample data</button></div></div></section>';
   }
   function render(){
