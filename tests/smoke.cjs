@@ -54,6 +54,14 @@ function setGame(date,time="10:00"){
  click("save-settings");
  tab("game");
 }
+assert.equal(get().players.length,3,"New installation should contain the real regulars, not sample players");
+assert.deepEqual(get().players.map(p=>p.name),["Mike","Drake","Christopher"]);
+assert.ok(get().liveLaunchResetDone,"New installation must not trigger future launch reset");
+// Add temporary test-only players in local storage. They are never in shipped app defaults.
+let fixture=get();
+["John","Dave","Steve"].forEach((name,i)=>fixture.players.push({id:"starter-"+(i+3),name,phone:"",regular:false,active:true}));
+memory["barn-basketball-local-v1"]=JSON.stringify(fixture);
+vm.runInNewContext(src,ctx,{filename:"barn-fixture-app.js"});
 let g=get().games[0];
 assert.equal(get().players.length,6);
 assert.deepEqual(get().players.slice(0,3).map(p=>p.name),["Mike","Drake","Christopher"]);
@@ -144,4 +152,47 @@ assert.ok(get().players.find(p=>p.name==="Pat Smith"));
 click("new-game");
 assert.equal(get().games.length,2);
 assert.equal(Object.values(get().games[1].roster).filter(e=>e.status==="yes").length,3);
-console.log("PASS: one-tap SMS links, no confirmations, batch cap and continuation, no-send correction, reminders, attendance, Calendar alert, contact import, history");
+// Legacy launch migration must preserve every saved contact, order and old game,
+// clear ONLY the current game's trial replies, and never repeat after first launch.
+const source=get();
+const priorGame={id:"older-actual-game",date:source.games[0].date,time:"10:00",capacity:6,
+  roster:{"starter-0":{status:"yes",regular:true,invitedAt:null},
+          "starter-3":{status:"no",invitedAt:1}},finished:true};
+const trialGame={id:"trial-active-game",date:source.games[0].date,time:"10:00",capacity:6,
+  roster:{"starter-0":{status:"yes",regular:true,invitedAt:null},
+          "starter-1":{status:"yes",regular:true,invitedAt:null},
+          "starter-2":{status:"yes",regular:true,invitedAt:null},
+          "starter-3":{status:"no",invitedAt:111},
+          "starter-4":{status:"pending",invitedAt:222},
+          "starter-5":{status:"no",invitedAt:null}},finished:false};
+const oldData={...source,activeGameId:"trial-active-game",
+  games:[priorGame,trialGame],liveLaunchResetDone:false};
+const savedPlayers=JSON.stringify(oldData.players);
+const legacyStore={"barn-basketball-local-v1":JSON.stringify(oldData),
+  "barn-basketball-batch-v1":"legacy","barn-basketball-unsent-draft-v1":"legacy"};
+const legacyCtx={...ctx,localStorage:{
+  getItem(k){return legacyStore[k]??null},
+  setItem(k,v){legacyStore[k]=v},
+  removeItem(k){delete legacyStore[k]}
+}};
+vm.runInNewContext(src,legacyCtx,{filename:"barn-legacy-app.js"});
+let migrated=JSON.parse(legacyStore["barn-basketball-local-v1"]);
+assert.equal(migrated.liveLaunchResetDone,true);
+assert.equal(JSON.stringify(migrated.players),savedPlayers,"Contact details and player order must not be changed");
+assert.equal(JSON.stringify(migrated.games[0].roster["starter-3"]),JSON.stringify(priorGame.roster["starter-3"]),"Older history must remain");
+assert.equal(Object.values(migrated.games[1].roster).filter(x=>x.status==="yes").length,3,"Regulars stay confirmed");
+assert.equal(migrated.games[1].roster["starter-3"],undefined,"Trial decline cleared");
+assert.equal(migrated.games[1].roster["starter-4"],undefined,"Trial pending cleared");
+assert.equal(migrated.games[1].roster["starter-5"],undefined,"Uninvited No cleared");
+assert.equal(legacyStore["barn-basketball-batch-v1"],undefined,"Old text batch cleared");
+assert.equal(legacyStore["barn-basketball-unsent-draft-v1"],undefined,"Old draft cleared");
+// Legacy no without invitation must not show Declined or count in the No column.
+migrated.games[1].roster["starter-5"]={status:"no",invitedAt:null};
+legacyStore["barn-basketball-local-v1"]=JSON.stringify(migrated);
+vm.runInNewContext(src,legacyCtx,{filename:"barn-restart-app.js"});
+assert.ok(node("content").innerHTML.includes("Not invited"),"Uninvited No must be shown as Not invited");
+let restart=JSON.parse(legacyStore["barn-basketball-local-v1"]);
+assert.equal(restart.games[1].roster["starter-5"].status,"no","One-time cleanup must not repeat on restart");
+assert.ok(!html.includes("About this test")&&!html.includes("Reset sample data")&&!html.includes("optional in testing"),"Production UI must have no beta language");
+assert.ok(html.includes("Clear current game invitations"),"Safe manual reset of current game is available");
+console.log("PASS: production defaults, one-time current-game migration, corrected Declined status, preserved contacts/history, one-tap invites, reminders, attendance and Calendar");
