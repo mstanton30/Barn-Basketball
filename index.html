@@ -202,7 +202,9 @@
     }
     if(fullRoster(g)){
       var alertHour=state.settings.reminderTime||"19:00";
-      left+='<div class="card"><div class="eyebrow">Night-before reminder</div><div class="game-time">Reminder time: '+esc(friendlyTime(alertHour))+' the night before · '+esc(longDate(g.date))+' game</div><p class="info-line">Add a Calendar alert once for this game. Your iPhone Calendar can notify you while this app is closed. It will not send texts automatically.</p><div class="row-actions">'+miniButton("Add iPhone Calendar alert","calendar-reminder","","primary")+miniButton("Edit reminder time","go-settings","","")+'</div></div>';
+      var due=Date.now()>=reminderMoment(g).getTime()&&Date.now()<gameStart(g);
+      var todo=state.players.filter(function(p){var e=entry(g,p.id);return p.phone&&e&&e.status==="yes"&&!e.reminderSentAt}).length;
+      left+='<div class="card"><div class="eyebrow">Night-before reminder</div><div class="game-time">Reminder time: '+esc(friendlyTime(alertHour))+' the night before · '+esc(longDate(g.date))+' game</div><p class="info-line">'+(due&&todo?"<strong>Reminder due now.</strong> ":"")+'Add a Calendar alert once for this game. Your iPhone Calendar can notify you while this app is closed. It will not send texts automatically.</p><div class="row-actions">'+miniButton("Add iPhone Calendar alert","calendar-reminder","","primary")+miniButton("Edit reminder time","go-settings","","")+'</div></div>';
     }
     if(overdue.length)left+='<div class="notice">'+overdue.length+' invitation(s) are over 12 hours old. Follow up, record a response, or withdraw before inviting someone else.</div>';
     return '<div class="main-grid"><div>'+left+'</div><div>'+section+'</div></div>';
@@ -420,6 +422,42 @@
     if(afterBatchMessage(pid)){render();advanceBatch()}else{render()};
   }
   function smsHref(phone,msg){return "sms:"+phone.replace(/[^\d+]/g,"")+"&body="+encodeURIComponent(msg)}
+  function reminderMoment(g){
+    var d=new Date(g.date+"T12:00:00");
+    d.setDate(d.getDate()-1);
+    var parts=(state.settings.reminderTime||"19:00").split(":");
+    d.setHours(Number(parts[0]),Number(parts[1]),0,0);
+    return d;
+  }
+  function icsDate(d){
+    return dateLocal(d).replace(/-/g,"")+"T"+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")+"00";
+  }
+  function icsEscape(s){return String(s).replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;")}
+  function calendarReminder(){
+    var g=game();
+    if(!fullRoster(g)){alert("Confirm the entire roster first, then add your night-before reminder.");return}
+    var when=reminderMoment(g);
+    if(when.getTime()<=Date.now()){alert("This reminder time is in the past. Pick a future game or update the reminder time.");return}
+    var end=new Date(when.getTime()+15*60000);
+    var uid="barn-basketball-reminder-"+g.id+"@mstanton30.github.io";
+    var text=[
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Barn Basketball//Night-Before Reminder//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+      "BEGIN:VEVENT","UID:"+uid,
+      "DTSTAMP:"+new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,""),
+      "DTSTART:"+icsDate(when),"DTEND:"+icsDate(end),
+      "SUMMARY:Send Barn Basketball reminder texts",
+      "DESCRIPTION:"+icsEscape("Open Barn Basketball and tap Send reminders for "+longDate(g.date)+" at "+friendlyTime(g.time)+". https://mstanton30.github.io/Barn-Basketball/"),
+      "BEGIN:VALARM","TRIGGER:PT0S","ACTION:DISPLAY","DESCRIPTION:Time to send your Barn Basketball reminder texts","END:VALARM",
+      "END:VEVENT","END:VCALENDAR",""
+    ].join("\r\n");
+    try{
+      var url=URL.createObjectURL(new Blob([text],{type:"text/calendar;charset=utf-8"}));
+      var a=document.createElement("a");a.href=url;a.download="barn-basketball-send-reminders-"+g.date+".ics";
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(url)},30000);
+      alert("Calendar reminder file created. Open the downloaded .ics file and ADD the event to your iPhone Calendar, with the alert enabled. This last step is required for an automatic notification.");
+    }catch(e){alert("Could not create the calendar file on this device. Open Calendar and add an event the night before at "+friendlyTime(state.settings.reminderTime||"19:00")+" with an alert at the event time.")}
+  }
   function copyText(msg){if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(msg).then(function(){alert("Text copied.")}).catch(function(){fallbackCopy(msg)})}else fallbackCopy(msg)}
   function fallbackCopy(msg){var t=document.createElement("textarea");t.value=msg;document.body.appendChild(t);t.select();try{document.execCommand("copy");alert("Text copied.")}catch(e){alert("Select and copy the preview text instead.")}t.remove()}
   function attendance(){
@@ -448,6 +486,7 @@
     if(a==="followup")openInvite(pid,true);
     if(a==="batch-invite")startBatch("invite");
     if(a==="batch-reminder")startBatch("reminder");
+    if(a==="calendar-reminder")calendarReminder();
     if(a==="continue-batch")advanceBatch();
     if(a==="cancel-batch"){if(confirm("Stop this message series? Already confirmed messages stay recorded.")){writeBatch(null);writeDraft(null);render()}}
     if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup,d.kind||"invite")}
