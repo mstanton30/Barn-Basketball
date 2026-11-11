@@ -55,7 +55,7 @@
 /* Design refresh: approved navy-and-orange Barn Basketball dashboard.
    Styling only; existing local data and game logic remain unchanged. */
 :root{color-scheme:dark;--navy:#061a2d;--navy2:#091f39;--orange:#ff7413;--ink:#092039;--gold:#ffda8c}
-body{background:var(--navy);color:#fff;min-height:100vh;min-height:100dvh;isolation:isolate}
+body{background:var(--navy);color:#fff;min-height:100vh;min-height:100dvh}
 body::before{content:"";position:fixed;inset:0;background:url("court-lines.svg") top center/min(100vw,580px) auto repeat-y;z-index:0;pointer-events:none;opacity:.65}
 .mast{background:transparent;position:relative;z-index:1;padding:max(22px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 12px}
 .shell{max-width:760px}.mast-row{position:relative;justify-content:center}
@@ -187,12 +187,19 @@ dialog .tiny{color:#687f91}
 /* iPhone standalone Safari: keep navigation at the viewport edge, not inside
    the scrolling main content/stacking context. Avoid transform on the bar. */
 html{min-height:100%;-webkit-text-size-adjust:100%}
-body{overflow-x:hidden}
-.tabs{position:fixed!important;inset:auto 0 0 0!important;top:auto!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;margin:0 auto!important;width:100%!important;max-width:760px;z-index:9999!important;backface-visibility:hidden}
+/* Avoid overflow-x:hidden on body: iOS can treat it as a scrolling container and make fixed navigation drift. */
+html{overflow-x:clip}
+.tabs{position:fixed!important;inset:auto 0 0 0!important;top:auto!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;margin:0 auto!important;width:100%!important;max-width:760px;z-index:9999!important}
 .body{padding-bottom:calc(125px + env(safe-area-inset-bottom,0px))}
 @supports(height:100dvh){body{min-height:100dvh}}
 
 .roster-footnote{font-size:11px;color:#b8cadc;text-align:center;margin:7px 5px 12px;line-height:1.45}
+
+/* Keep only the document scrolling; a body overflow container or composited
+   bottom bar can drift on iOS after returning from Messages. */
+html,body{overscroll-behavior-x:none}
+body{overflow:visible!important}
+.tabs{-webkit-transform:none!important;will-change:auto!important;contain:none!important}
 </style>
 </head>
 <body>
