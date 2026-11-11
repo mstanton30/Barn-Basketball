@@ -2,7 +2,11 @@ const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/st
 const html=fs.readFileSync("index.html","utf8");
 const src=html.match(/<script>([\s\S]*?)<\/script>/i)?.[1];
 assert.ok(src);new vm.Script(src);
-assert.ok(html.includes('autocomplete="name"'));assert.ok(html.includes('autocomplete="tel"'));
+assert.ok(html.includes('autocomplete="name"'));
+assert.ok(html.indexOf('</main>')<html.indexOf('<nav class="tabs"'),"Tab bar must be outside the scrolling main");
+assert.ok(html.includes('position:fixed!important;inset:auto 0 0 0!important'),"Bottom bar is fixed to viewport");
+assert.ok(html.includes('transform:none!important'),"Avoid iOS transformed fixed bar");
+assert.ok(html.includes('z-index:9999!important'),"Tab bar remains above content");assert.ok(html.includes('autocomplete="tel"'));
 assert.ok(html.includes('viewBox="0 0 144 62"'),"Top basketball logo has corrected geometry");
 assert.ok(html.includes('M9 61 A63 63 0 0 1 135 61'),"Realistic basketball arc is present");
 assert.ok(html.includes('src="barn-hoop-scoreboard.jpg"'),"Hoop is an explicit image, not a CSS background");
