@@ -197,7 +197,7 @@
       if(!fullRoster(g)||!e||e.status!=="yes"||e.reminderSentAt)return false;
       e.reminderSentAt=Date.now();
     }else if(kind==="invite"){
-      if(remaining(g)<=0||!player(pid)?.active||!player(pid)?.phone||e&&e.status!=="not invited")return false;
+      if(remaining(g)<=0||!player(pid)?.active||!player(pid)?.phone||e&&!["not invited","no","withdrawn"].includes(e.status))return false;
       g.roster[pid]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
       g.finished=false;
     }else if(kind==="followup"){
@@ -521,18 +521,41 @@
     if(a==="down" && pos>=0 && pos<state.players.length-1){var tmp2=state.players[pos+1];state.players[pos+1]=state.players[pos];state.players[pos]=tmp2;save();render()}
     if(a==="toggle" && p){p.active=!p.active;save();render()}
     if(a==="delete-player" && editingPlayer){var target=player(editingPlayer);if(confirm("Delete "+target.name+"? Past games remain, but this player disappears from reports.")){state.players=state.players.filter(function(x){return x.id!==editingPlayer});document.getElementById("playerDialog").close();save();render()}}
+    if(a==="direct-invite"){
+      if(!recordTextOpen(pid,"invite",g)){ev.preventDefault();alert("This spot is no longer open. Review the roster.");}
+    }
+    if(a==="direct-followup"){
+      if(!recordTextOpen(pid,"followup",g)){ev.preventDefault();alert("This person is no longer pending.");}
+    }
+    if(a==="batch-start-invite"||a==="batch-start-reminder"){
+      var kind=a==="batch-start-invite"?"invite":"reminder";
+      var choices=eligibleTextPlayers(g,kind);
+      if(!choices.length||choices[0].id!==pid||readBatch()){ev.preventDefault();alert("The roster changed. Refresh the game and try again.");}
+      else if(recordTextOpen(pid,kind,g)){
+        writeBatch(choices.length>1?{type:kind,gameId:g.id,ids:choices.slice(1).map(function(pl){return pl.id})}:null);
+      }else{ev.preventDefault();alert("Could not prepare the message.");}
+    }
+    if(a==="batch-next-direct"){
+      var b=readBatch(),next=batchNext(g);
+      if(!b||!next||next.player.id!==pid){ev.preventDefault();alert("The recipient list changed. Refresh the game.");}
+      else if(recordTextOpen(pid,b.type,g)){
+        b.ids=b.ids.filter(function(x){return x!==pid});
+        writeBatch(b.ids.length?b:null);
+      }else{ev.preventDefault();alert("This person is no longer eligible.");}
+    }
+    if(a==="finish-batch"){writeBatch(null);render()}
     if(a==="invite")openInvite(pid,false);
     if(a==="followup")openInvite(pid,true);
     if(a==="batch-invite")startBatch("invite");
     if(a==="batch-reminder")startBatch("reminder");
     if(a==="calendar-reminder")calendarReminder();
     if(a==="continue-batch")advanceBatch();
-    if(a==="cancel-batch"){if(confirm("Stop this message series? Already confirmed messages stay recorded.")){writeBatch(null);writeDraft(null);render()}}
+    if(a==="cancel-batch"){writeBatch(null);writeDraft(null);render()}
     if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup,d.kind||"invite")}
     if(a==="discard-draft"){if(confirm("Discard this unsent invitation draft?")){writeDraft(null);render()}}
-    if(a==="not-sent"){if(confirm("Mark this invitation as NOT sent? This clears the pending spot so you can invite them properly.")){
+    if(a==="not-sent"){
       var e=entry(g,pid);if(e){e.status="not invited";e.invitedAt=null;e.noShow=false;e.attended=false;save();render()}
-    }}
+    }
     if(a==="close-invite")invitingPlayer=null;
     if(a==="copy-message")copyText(message());
     if(a==="copy-invite"){flagAttempt();copyText(document.getElementById("inviteMessage").textContent)}
