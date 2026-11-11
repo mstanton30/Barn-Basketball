@@ -56,7 +56,7 @@
    Styling only; existing local data and game logic remain unchanged. */
 :root{color-scheme:dark;--navy:#061a2d;--navy2:#091f39;--orange:#ff7413;--ink:#092039;--gold:#ffda8c}
 body{background:var(--navy);color:#fff;min-height:100vh;min-height:100dvh;isolation:isolate}
-body::before{content:"";position:fixed;inset:0;background:url("court-lines.svg") top center/min(100vw,580px) auto repeat-y;z-index:-1;pointer-events:none;opacity:.88}
+body::before{content:"";position:fixed;inset:0;background:url("court-lines.svg") top center/min(100vw,580px) auto repeat-y;z-index:0;pointer-events:none;opacity:.65}
 .mast{background:transparent;position:relative;z-index:1;padding:22px 16px 12px}
 .shell{max-width:760px}.mast-row{position:relative;justify-content:center}
 .brand{display:flex;flex-direction:column;align-items:center;gap:0}
@@ -101,7 +101,7 @@ body::before{content:"";position:fixed;inset:0;background:url("court-lines.svg")
 .badge{border-radius:999px;font-size:11px;padding:7px 11px}
 .badge.yes{background:#dff5e5;color:#11763f}.badge.pending{background:#ffe6b0;color:#9b640e}.badge.no{background:#ffe4e7;color:#b23a46}
 .info-line{color:#698095}.tiny{color:#a8bfd0}
-label{color:#52647a}.field{color:#182e48;background:#fff;border:1px solid #c9d6e3;min-height:44px}
+label{color:#52647a}.card .tiny{color:#6b7d90}.field{color:#182e48;background:#fff;border:1px solid #c9d6e3;min-height:44px}
 .field:focus{outline:2px solid var(--orange)}
 .preview{background:#e9f1f7;color:#213b55}
 .table-wrap{overflow:auto}th{color:#647a90}td{color:#172e47}
