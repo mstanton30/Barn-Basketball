@@ -168,6 +168,20 @@ dialog .tiny{color:#687f91}
 .hero-picture-overlay{position:absolute;right:0;top:0;width:58%;height:157px;z-index:0;pointer-events:none;background:linear-gradient(90deg,#06192e 0%,#06192ec9 18%,#06192e39 65%,#06192e14 100%)}
 @media(min-width:720px){.hero-picture,.hero-picture-overlay{height:190px}}
 
+
+/* Invitation controls: primary action plus smaller, safely reversible reset. */
+.feature-cta{display:flex;align-items:stretch;gap:9px}
+.feature-cta .invite-main{flex:1 1 auto;min-width:0;display:flex}
+.feature-cta .invite-main>a,.feature-cta .invite-main>button{width:100%;min-width:0}
+.feature-cta .reset-invite{
+  flex:0 0 94px;width:94px;min-height:60px;
+  border-radius:13px;background:#123352;border:1px solid #6584a2;
+  color:#f6f9ff;font-size:12px;font-weight:850;letter-spacing:.1px;
+  text-align:center;line-height:1.2;padding:9px 6px;
+  box-shadow:0 4px 12px #0004;cursor:pointer;z-index:3;position:relative
+}
+.feature-cta .reset-invite:disabled{opacity:.43;cursor:default}
+@media(max-width:370px){.feature-cta .reset-invite{flex-basis:82px;width:82px;font-size:11px}.feature-cta .invite-main>a,.feature-cta .invite-main>button{font-size:16px}}
 </style>
 </head>
 <body>
@@ -239,6 +253,49 @@ dialog .tiny{color:#687f91}
   var editingPlayer = null, invitingPlayer = null;
   var DRAFT_KEY="barn-basketball-unsent-draft-v1";
   var BATCH_KEY="barn-basketball-batch-v1";
+  var LAST_INVITE_KEY="barn-basketball-last-invite-v1";
+  function readLastInvite(){try{
+    var l=JSON.parse(localStorage.getItem(LAST_INVITE_KEY));
+    return l&&l.gameId&&l.pid&&l.invitedAt?l:null;
+  }catch(e){return null}}
+  function writeLastInvite(l){try{
+    if(l)localStorage.setItem(LAST_INVITE_KEY,JSON.stringify(l));
+    else localStorage.removeItem(LAST_INVITE_KEY);
+  }catch(e){}}
+  function resetCandidate(g){
+    var last=readLastInvite();
+    if(last&&last.gameId===g.id){
+      var e=entry(g,last.pid);
+      return e&&e.status==="pending"&&e.invitedAt===last.invitedAt?last:null;
+    }
+    // One-time compatibility for invite sequences opened before this update.
+    // For new batches the version marker prevents undoing an unrelated pending RSVP.
+    var b=readBatch();
+    if(!b||b.gameId!==g.id||b.type!=="invite"||b.version===2)return null;
+    var latest=null;
+    Object.keys(g.roster).forEach(function(pid){
+      var e=entry(g,pid);
+      if(e&&e.status==="pending"&&e.invitedAt&&(!latest||e.invitedAt>latest.invitedAt))
+        latest={gameId:g.id,pid:pid,invitedAt:e.invitedAt,previous:null};
+    });
+    return latest&&Date.now()-latest.invitedAt<3*60*60*1000?latest:null;
+  }
+  function resetInviteFlow(g){
+    var last=resetCandidate(g),b=readBatch();
+    var activeBatch=!!(b&&b.gameId===g.id&&b.type==="invite");
+    if(!last&&!activeBatch)return;
+    if(last){
+      var e=entry(g,last.pid);
+      if(e&&e.status==="pending"&&e.invitedAt===last.invitedAt){
+        if(last.previous)g.roster[last.pid]=last.previous;
+        else delete g.roster[last.pid];
+        g.finished=false;
+      }
+    }
+    if(activeBatch)writeBatch(null);
+    writeLastInvite(null);
+    save();render();
+  }
   function readBatch(){try{var b=JSON.parse(localStorage.getItem(BATCH_KEY));return b&&b.gameId&&Array.isArray(b.ids)&&["invite","reminder"].includes(b.type)?b:null}catch(e){return null}}
   function writeBatch(b){try{if(b)localStorage.setItem(BATCH_KEY,JSON.stringify(b));else localStorage.removeItem(BATCH_KEY)}catch(e){}}
 
@@ -348,7 +405,9 @@ dialog .tiny{color:#687f91}
       e.reminderSentAt=Date.now();
     }else if(kind==="invite"){
       if(remaining(g)<=0||!player(pid)?.active||!player(pid)?.phone||e&&!["not invited","no","withdrawn"].includes(e.status))return false;
-      g.roster[pid]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
+      var openedAt=Date.now();
+      writeLastInvite({gameId:g.id,pid:pid,invitedAt:openedAt,previous:e?JSON.parse(JSON.stringify(e)):null});
+      g.roster[pid]={status:"pending",invitedAt:openedAt,regular:false,attended:false};
       g.finished=false;
     }else if(kind==="followup"){
       if(!e||e.status!=="pending")return false;
@@ -408,7 +467,11 @@ dialog .tiny{color:#687f91}
     }else{
       cta='<button class="btn no-invite" data-action="show-roster">'+(fullRoster(g)?"All Players Confirmed ✓":"View Pending Invitations")+'</button>';
     }
-    var primary='<div class="feature-cta">'+cta+'</div>';
+    var canReset=!!resetCandidate(g)||!!(batch&&batch.gameId===g.id&&batch.type==="invite");
+    var primary='<div class="feature-cta"><div class="invite-main">'+cta+'</div>'
+      +'<button type="button" class="reset-invite" data-action="reset-last-invite"'
+      +(canReset?'':' disabled aria-disabled="true"')
+      +' title="Stop the invite sequence and undo the most recently opened invitation">Reset Invite</button></div>';
     var secondary='<div class="secondary-tools">'
       +miniButton("Edit Game","go-settings","")
       +miniButton("Review No-shows","attendance","")
@@ -484,6 +547,10 @@ dialog .tiny{color:#687f91}
     var g=game(),e=entry(g,pid)||{status:"not invited",invitedAt:null,regular:false,attended:false};
     if((status==="yes"||status==="pending") && e.status!=="yes" && e.status!=="pending" && occupied(g)>=g.capacity){alert("All "+g.capacity+" spots are already confirmed or pending. Resolve an invitation first.");return}
     e.status=status;
+    if(status!=="pending"){
+      var last=readLastInvite();
+      if(last&&last.gameId===g.id&&last.pid===pid)writeLastInvite({gameId:g.id,pid:pid,invitedAt:last.invitedAt,previous:last.previous,consumed:true});
+    }
     if(status!=="yes"){e.attended=false;e.noShow=false}
     g.roster[pid]=e;g.finished=false;save();render();
   }
@@ -725,7 +792,7 @@ dialog .tiny{color:#687f91}
       var choices=eligibleTextPlayers(g,kind);
       if(!choices.length||choices[0].id!==pid||readBatch()){ev.preventDefault();alert("The roster changed. Refresh the game and try again.");}
       else if(recordTextOpen(pid,kind,g)){
-        writeBatch(choices.length>1?{type:kind,gameId:g.id,ids:choices.slice(1).map(function(pl){return pl.id})}:null);
+        writeBatch(choices.length>1?{type:kind,gameId:g.id,ids:choices.slice(1).map(function(pl){return pl.id}),version:2}:null);
       }else{ev.preventDefault();alert("Could not prepare the message.");}
     }
     if(a==="batch-next-direct"){
@@ -737,6 +804,7 @@ dialog .tiny{color:#687f91}
       }else{ev.preventDefault();alert("This person is no longer eligible.");}
     }
     if(a==="finish-batch"){writeBatch(null);render()}
+    if(a==="reset-last-invite")resetInviteFlow(g);
     if(a==="invite")openInvite(pid,false);
     if(a==="followup")openInvite(pid,true);
     if(a==="batch-invite")startBatch("invite");
@@ -747,7 +815,9 @@ dialog .tiny{color:#687f91}
     if(a==="resume-invite"){var d=readDraft();if(d&&d.pid===pid)openInvite(pid,!!d.followup,d.kind||"invite")}
     if(a==="discard-draft"){if(confirm("Discard this unsent invitation draft?")){writeDraft(null);render()}}
     if(a==="not-sent"){
-      var e=entry(g,pid);if(e){e.status="not invited";e.invitedAt=null;e.noShow=false;e.attended=false;save();render()}
+      var e=entry(g,pid);if(e){e.status="not invited";e.invitedAt=null;e.noShow=false;e.attended=false;
+        var last=readLastInvite();if(last&&last.gameId===g.id&&last.pid===pid)writeLastInvite(null);
+        save();render()}
     }
     if(a==="close-invite")invitingPlayer=null;
     if(a==="copy-message")copyText(message());
@@ -763,7 +833,7 @@ dialog .tiny{color:#687f91}
     if(a==="change-response"){var chosen=prompt("Change "+p.name+"'s status to yes, no, withdrawn, or not invited:", "no");if(chosen){chosen=chosen.trim().toLowerCase();if(["yes","no","withdrawn"].includes(chosen))setResponse(pid,chosen);else if(chosen==="not invited")setResponse(pid,"not invited");else alert("No changes made.")}}
     if(a==="attendance")attendance();
     if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e){e.noShow=!!input.checked;e.attended=!e.noShow}});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
-    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);writeBatch(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
+    if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);writeBatch(null);writeLastInvite(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
     if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
     if(a==="save-settings"){
       var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim(),rtime=document.getElementById("reminderTime").value,rtemplate=document.getElementById("reminderTemplate").value.trim();
@@ -774,7 +844,7 @@ dialog .tiny{color:#687f91}
     if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
     if(a==="clear-current-invitations"){
       if(confirm("Clear invitations and responses for this game only? Players, phone numbers, ranking, game details, and older game history stay unchanged.")){
-        resetCurrentGame(game(),state.players);writeDraft(null);writeBatch(null);save();changeView("game");
+        resetCurrentGame(game(),state.players);writeDraft(null);writeBatch(null);writeLastInvite(null);save();changeView("game");
       }
     }
   });
