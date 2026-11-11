@@ -71,3 +71,14 @@ This is a visual update; the local browser storage key and saved data model have
 - Settings includes **Clear current game invitations** to intentionally start over without erasing contacts or older games.
 - Imported backups are excluded from the one-time cleanup, to avoid silently discarding their recorded responses.
 - Data is stored only in this browser, not synced. The app does not verify whether iPhone Messages actually sent a text. Export a backup before deleting browser data or moving devices.
+
+## Reset Invite (accidental SMS tap)
+
+On Home, a **Reset Invite** button sits to the right of the main **Invite Players / Next** button. If you accidentally open a text and do not actually send it, tap **Reset Invite**:
+- It immediately stops the current invitation sequence (if one is active).
+- It returns the **most recently opened** pending invitation to its previous status, making that player eligible to invite again.
+- It leaves previously pending/confirmed players, the roster limit, the saved contact list, and game history unchanged.
+- The button is disabled if there is nothing to reset. The latest pending invitation can be undone even after a batch finishes.
+- A text already sent in iPhone Messages cannot be unsent by resetting app tracking. **Do not use Reset Invite on a message you actually sent.** For earlier canceled drafts, use **Not sent** beside the affected player under Manage all invitations.
+
+The reset action is stored only on this device and does not require a confirmation dialog.
