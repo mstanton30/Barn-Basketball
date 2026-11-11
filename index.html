@@ -197,7 +197,7 @@ dialog .tiny{color:#687f91}
   <form id="playerForm">
     <h3 id="playerTitle">Add player</h3>
     <div class="form-group"><label for="playerName">Name</label><input id="playerName" class="field" maxlength="70" required autocomplete="name"></div>
-    <div class="form-group"><label for="playerPhone">Phone number (optional in testing)</label><input id="playerPhone" class="field" inputmode="tel" type="tel" placeholder="(585) 555-0123" autocomplete="tel"></div>
+    <div class="form-group"><label for="playerPhone">Phone number (optional)</label><input id="playerPhone" class="field" inputmode="tel" type="tel" placeholder="(585) 555-0123" autocomplete="tel"></div>
     <div class="row-actions">
       <button class="btn light" type="button" data-action="choose-contact">Choose from Contacts</button>
       <label class="btn" for="contactFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import contact card (.vcf)</label>
@@ -251,15 +251,30 @@ dialog .tiny{color:#687f91}
   function dateLocal(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
   function nextSaturday(after){var d=after?new Date(after+"T12:00:00"):new Date();var days=(6-d.getDay()+7)%7;if(days===0)days=7;d.setDate(d.getDate()+days);return dateLocal(d)}
   function starter(){
-    var p=[["Mike",true],["Drake",true],["Christopher",true],["John",false],["Dave",false],["Steve",false]].map(function(a,i){return{id:"starter-"+i,name:a[0],phone:"",regular:a[1],active:true}});
+    var p=[["Mike",true],["Drake",true],["Christopher",true]].map(function(a,i){return{id:"starter-"+i,name:a[0],phone:"",regular:a[1],active:true}});
     var g={id:id(),date:nextSaturday(),time:"10:00",capacity:6,roster:{},finished:false,createdAt:Date.now()};
     p.filter(function(x){return x.regular}).forEach(function(x){g.roster[x.id]={status:"yes",invitedAt:null,regular:true,attended:false}});
-    return {version:1,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?",reminderTime:"19:00",reminderTemplate:"Reminder: barn basketball is {day}, {date} at {time}. See you there!"}};
+    return {version:1,liveLaunchResetDone:true,players:p,games:[g],activeGameId:g.id,settings:{defaultTime:"10:00",capacity:6,template:"Are you available to play some barn basketball at {time} on {day}?",reminderTime:"19:00",reminderTemplate:"Reminder: barn basketball is {day}, {date} at {time}. See you there!"}};
+  }
+  function resetCurrentGame(g,players){
+    // One-game reset: keep contacts, rankings, and historical games untouched.
+    if(!g)return;
+    var clean={};
+    players.forEach(function(p){if(p.regular&&p.active)clean[p.id]={status:"yes",invitedAt:null,regular:true,attended:false,noShow:false}});
+    g.roster=clean;g.finished=false;
   }
   function migrate(v){
     if(!v.settings.reminderTime)v.settings.reminderTime="19:00";
     if(!v.settings.reminderTemplate)v.settings.reminderTemplate="Reminder: barn basketball is {day}, {date} at {time}. See you there!";
-    v.games.forEach(function(g){if(!g.roster)return;Object.keys(g.roster).forEach(function(pid){var e=g.roster[pid];if(e&&e.status==="yes"&&typeof e.noShow!=="boolean"&&g.finished===true)e.noShow=e.attended===false})});return v}
+    v.games.forEach(function(g){if(!g.roster)return;Object.keys(g.roster).forEach(function(pid){var e=g.roster[pid];if(e&&e.status==="yes"&&typeof e.noShow!=="boolean"&&g.finished===true)e.noShow=e.attended===false})});
+    if(!v.liveLaunchResetDone){
+      // Approved one-time launch cleanup on this device's CURRENT game only.
+      resetCurrentGame(v.games.find(function(g){return g.id===v.activeGameId})||v.games[v.games.length-1],v.players);
+      v.liveLaunchResetDone=true;
+      try{localStorage.removeItem("barn-basketball-batch-v1");localStorage.removeItem("barn-basketball-unsent-draft-v1")}catch(e){}
+    }
+    return v
+  }
   function load(){try{var raw=localStorage.getItem(KEY);if(raw){var v=JSON.parse(raw);if(v && v.version===1 && Array.isArray(v.players) && Array.isArray(v.games) && v.settings && v.games.length)return migrate(v)}}catch(e){}return starter()}
   var state=load();
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert("Could not save to this browser. Check your storage settings.")}}
@@ -274,7 +289,7 @@ dialog .tiny{color:#687f91}
   function afterDeadline(g){return Date.now()>=gameStart(g)+3*60*60*1000}
   function playedFor(g,e){return !!(e&&e.status==="yes"&&e.noShow!==true&&afterDeadline(g))}
   function gamePlayedCount(g){return Object.values(g.roster).filter(function(e){return playedFor(g,e)}).length}
-  function stats(pid){var s={yes:0,no:0,noShow:0,played:0};state.games.forEach(function(g){var e=entry(g,pid);if(!e)return;if(e.status==="yes"){s.yes++;if(e.noShow===true)s.noShow++}if(e.status==="no")s.no++;if(playedFor(g,e))s.played++});return s}
+  function stats(pid){var s={yes:0,no:0,noShow:0,played:0};state.games.forEach(function(g){var e=entry(g,pid);if(!e)return;if(e.status==="yes"){s.yes++;if(e.noShow===true)s.noShow++}if(e.status==="no"&&e.invitedAt)s.no++;if(playedFor(g,e))s.played++});return s}
   function friendlyTime(hm){if(!hm)return "10 AM";var parts=hm.split(":"),h=Number(parts[0]),m=Number(parts[1]);return ((h%12)||12)+(m?":"+String(m).padStart(2,"0"):"")+(h>=12?" PM":" AM")}
   function dayName(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long"})}
   function longDate(date){return new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
@@ -283,7 +298,7 @@ dialog .tiny{color:#687f91}
   function reminderMessage(g){return fillTemplate(state.settings.reminderTemplate,g)}
   function remaining(g){return Math.max(0,g.capacity-occupied(g))}
   function fullRoster(g){return yesCount(g)===g.capacity&&pendingCount(g)===0}
-  function statusOf(e){if(!e)return "not invited";if(e.status==="pending"&&e.invitedAt&&Date.now()-e.invitedAt>=DAY)return "overdue";return e.status}
+  function statusOf(e){if(!e)return "not invited";if(e.status==="no"&&!e.invitedAt)return "not invited";if(e.status==="pending"&&e.invitedAt&&Date.now()-e.invitedAt>=DAY)return "overdue";return e.status}
   function responseLabel(e){var st=statusOf(e);return st==="yes"?"Confirmed":st==="no"?"Declined":st==="pending"?"Awaiting reply":st==="overdue"?"12h overdue":st==="withdrawn"?"Withdrawn":"Not invited"}
   function miniButton(label,action,pid,cls){return '<button class="btn mini '+(cls||"")+'" data-action="'+action+'" data-id="'+esc(pid)+'">'+label+'</button>'}
   function summary(g){
@@ -456,8 +471,8 @@ dialog .tiny{color:#687f91}
       +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
       +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
       +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
-      +'<div class="section-head"><h2>About this test</h2></div><div class="card"><p class="info-line">Invites and reminders open directly in Messages, where you press Send yourself. Opening Messages records an invitation as Pending. If you cancel without sending, tap Not sent to release the slot. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
-      +'<div class="btnrow"><button class="btn danger" data-action="reset-data">Reset sample data</button></div></div></section>';
+      +'<div class="section-head"><h2>How Barn Basketball works</h2></div><div class="card"><p class="info-line">Invites and reminders open directly in Messages, where you press Send yourself. Opening Messages records an invitation as Pending. If you cancel without sending, tap Not sent to release the slot. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
+      +'<div class="btnrow"><button class="btn danger" data-action="clear-current-invitations">Clear current game invitations</button></div></div></section>';
   }
   function render(){
     document.querySelectorAll(".tab").forEach(function(el){var on=el.dataset.tab===view;el.classList.toggle("active",on);el.setAttribute("aria-current",on?"page":"false")});
@@ -757,7 +772,11 @@ dialog .tiny{color:#687f91}
       g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;state.settings.reminderTime=rtime;state.settings.reminderTemplate=rtemplate;save();render();alert("Game and message saved.")
     }
     if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
-    if(a==="reset-data"){if(confirm("Replace all stored players, invitations, history and settings with the sample data? This cannot be undone.")){state=starter();writeDraft(null);writeBatch(null);save();changeView("game")}}
+    if(a==="clear-current-invitations"){
+      if(confirm("Clear invitations and responses for this game only? Players, phone numbers, ranking, game details, and older game history stay unchanged.")){
+        resetCurrentGame(game(),state.players);writeDraft(null);writeBatch(null);save();changeView("game");
+      }
+    }
   });
   document.getElementById("playerForm").addEventListener("submit",function(ev){ev.preventDefault();var name=document.getElementById("playerName").value.trim(),phone=document.getElementById("playerPhone").value.trim();if(!name)return;
     if(editingPlayer){var p=player(editingPlayer);p.name=name;p.phone=phone;p.regular=document.getElementById("playerRegular").checked;p.active=document.getElementById("playerActive").checked}
