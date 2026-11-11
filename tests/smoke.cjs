@@ -5,10 +5,10 @@ assert.ok(src);new vm.Script(src);
 assert.ok(html.includes('autocomplete="name"'));assert.ok(html.includes('autocomplete="tel"'));
 assert.ok(html.includes('viewBox="0 0 144 62"'),"Top basketball logo has corrected geometry");
 assert.ok(html.includes('M9 61 A63 63 0 0 1 135 61'),"Realistic basketball arc is present");
-assert.ok(html.includes('src="barn-hoop-card-v2.jpg?v=4"'),"Hoop is an explicit image, not a CSS background");
+assert.ok(html.includes('src="barn-hoop-scoreboard.jpg"'),"Hoop is an explicit image, not a CSS background");
 assert.ok(html.includes('class="hero-picture-overlay"'),"Readable text overlay is present");
-assert.ok(fs.existsSync("barn-hoop-card-v2.jpg"),"Hoop image asset exists");
-const jpeg=fs.readFileSync("barn-hoop-card-v2.jpg");
+assert.ok(fs.existsSync("barn-hoop-scoreboard.jpg"),"Hoop image asset exists");
+const jpeg=fs.readFileSync("barn-hoop-scoreboard.jpg");
 assert.ok(jpeg.length>1000&&jpeg[0]===0xff&&jpeg[1]===0xd8&&jpeg.at(-2)===0xff&&jpeg.at(-1)===0xd9,"Hoop JPG is complete");
 
 const memory={},nodes={},events={},alerts=[],calendarFiles=[];
@@ -72,7 +72,7 @@ assert.ok(node("content").innerHTML.includes('class="snapshot-panel"'),"Player s
 assert.ok(node("content").innerHTML.includes("Saturday") || node("content").innerHTML.includes("Upcoming"),"Next game data is rendered");
 assert.ok(!node("content").innerHTML.includes("#1 Priority"),"No priority label is shown under player names");
 assert.ok(html.includes('court-lines.svg'),"Subtle court watermark asset is referenced");
-assert.ok(html.includes('barn-hoop-card.jpg'),"Approved barn hoop image is used");
+
 assert.ok(html.includes('data-tab="game" aria-label="Home"'),"Bottom Home navigation is present");
 
 for(let i=0;i<6;i++)setPhone("starter-"+i,"+1585555"+String(i+1).padStart(4,"0"));
