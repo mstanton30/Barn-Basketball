@@ -50,7 +50,15 @@ let g=get().games[0];
 assert.equal(get().players.length,6);
 assert.deepEqual(get().players.slice(0,3).map(p=>p.name),["Mike","Drake","Christopher"]);
 assert.equal(Object.values(g.roster).filter(e=>e.status==="yes").length,3);
-assert.ok(node("content").innerHTML.includes("3</strong><small>Open spots"));
+assert.ok(node("content").innerHTML.includes("3 open"),"Dashboard shows available slots");
+assert.ok(node("content").innerHTML.includes('class="hero-panel"'),"Next Game hero panel renders");
+assert.ok(node("content").innerHTML.includes('class="snapshot-panel"'),"Player snapshot renders");
+assert.ok(node("content").innerHTML.includes("Saturday") || node("content").innerHTML.includes("Upcoming"),"Next game data is rendered");
+assert.ok(!node("content").innerHTML.includes("#1 Priority"),"No priority label is shown under player names");
+assert.ok(html.includes('court-lines.svg'),"Subtle court watermark asset is referenced");
+assert.ok(html.includes('barn-hoop-card.jpg'),"Approved barn hoop image is used");
+assert.ok(html.includes('data-tab="game" aria-label="Home"'),"Bottom Home navigation is present");
+
 for(let i=0;i<6;i++)setPhone("starter-"+i,"+1585555"+String(i+1).padStart(4,"0"));
 // Direct open: no confirm modal and exactly one tap to mark pending.
 tab("game");
@@ -112,6 +120,10 @@ click("calendar-reminder");
 const ics=calendarFiles[calendarFiles.length-1]?.parts.join("");
 assert.ok(ics&&ics.includes("BEGIN:VALARM")&&ics.includes("TRIGGER:PT0S"));
 assert.ok(ics.includes("T190000"));
+tab("players");assert.ok(node("content").innerHTML.includes("Manage Players"),"Players tab is present");
+tab("stats");assert.ok(node("content").innerHTML.includes("Player statistics"),"Stats tab preserved");
+tab("settings");assert.ok(node("content").innerHTML.includes("Game & message"),"Settings tab preserved");
+
 // Contact card importing still works.
 tab("players");click("contact-player");
 events["node:contactFile:change"]({target:{files:[{content:"BEGIN:VCARD\nVERSION:3.0\nFN:Pat Smith\nTEL;TYPE=CELL:+15855550123\nEND:VCARD"}],value:""}});
