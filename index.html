@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Barn Hoops">
-  <title>Barn Basketball · Game Organizer</title>
+  <title>Barn Basketball · Game Organizer · Full Roster</title>
   <link rel="icon" href="apple-touch-icon.png?v=2" type="image/png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
   <style>
@@ -191,6 +191,8 @@ body{overflow-x:hidden}
 .tabs{position:fixed!important;inset:auto 0 0 0!important;top:auto!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;margin:0 auto!important;width:100%!important;max-width:760px;z-index:9999!important;backface-visibility:hidden}
 .body{padding-bottom:calc(125px + env(safe-area-inset-bottom,0px))}
 @supports(height:100dvh){body{min-height:100dvh}}
+
+.roster-footnote{font-size:11px;color:#b8cadc;text-align:center;margin:7px 5px 12px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -442,12 +444,16 @@ body{overflow-x:hidden}
     return '<div class="player"><div class="rank">'+(index+1)+'</div><div class="player-info"><div class="player-name">'+esc(p.name)+'</div><div class="player-caption">'+esc(cap)+'</div></div>'+text+'</div>';
   }
   function rosterSnapshot(g){
+    // Full game response list (no four-player limit), ordered by response:
+    // confirmed first, awaiting/overdue next, withdrawn, then declined.
+    // Within each status keep the player's configured priority order.
+    var order={yes:0,pending:1,overdue:1,withdrawn:2,no:3};
     var visible=state.players.filter(function(p){
-      // Show everyone with a real current-game response or invitation, even
-      // after declining, withdrawing, or being deactivated in Players.
-      var e=entry(g,p.id),s=statusOf(e);
-      return s==="yes"||s==="no"||s==="pending"||s==="overdue"||s==="withdrawn";
-    });
+      var s=statusOf(entry(g,p.id));
+      return Object.prototype.hasOwnProperty.call(order,s);
+    }).map(function(p,i){return {player:p,rank:i,status:statusOf(entry(g,p.id))}})
+      .sort(function(a,b){return order[a.status]-order[b.status]||a.rank-b.rank})
+      .map(function(item){return item.player});
     var rows=visible.map(function(p){
       var e=entry(g,p.id),s=statusOf(e),yes=s==="yes",no=s==="no",wait=s==="pending"||s==="overdue";
       var cls=yes?"yes":no?"no":wait?"pending":"none";
@@ -460,7 +466,8 @@ body{overflow-x:hidden}
     if(!rows)rows='<div class="empty">No invitations or confirmations yet. Invite players to see their responses here.</div>';
     return '<section class="roster-summary"><div class="roster-title"><h2>Players</h2>'
       +'<button type="button" class="see-all" data-action="show-roster">See All ›</button></div>'
-      +'<div class="snapshot-panel">'+rows+'</div></section>';
+      +'<div class="snapshot-panel" data-roster-count="'+visible.length+'">'+rows+'</div>'
+      +'<div class="roster-footnote">'+visible.length+' player'+(visible.length===1?'':'s')+' with recorded game responses · Confirmed first, declined last</div></section>';
   }
   function renderGame(){
     var g=game(),overdue=state.players.filter(function(p){return p.active&&statusOf(entry(g,p.id))==="overdue"});
