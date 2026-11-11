@@ -442,7 +442,12 @@ body{overflow-x:hidden}
     return '<div class="player"><div class="rank">'+(index+1)+'</div><div class="player-info"><div class="player-name">'+esc(p.name)+'</div><div class="player-caption">'+esc(cap)+'</div></div>'+text+'</div>';
   }
   function rosterSnapshot(g){
-    var visible=state.players.filter(function(p){return p.active}).slice(0,4);
+    var visible=state.players.filter(function(p){
+      // Show everyone with a real current-game response or invitation, even
+      // after declining, withdrawing, or being deactivated in Players.
+      var e=entry(g,p.id),s=statusOf(e);
+      return s==="yes"||s==="no"||s==="pending"||s==="overdue"||s==="withdrawn";
+    });
     var rows=visible.map(function(p){
       var e=entry(g,p.id),s=statusOf(e),yes=s==="yes",no=s==="no",wait=s==="pending"||s==="overdue";
       var cls=yes?"yes":no?"no":wait?"pending":"none";
@@ -452,7 +457,7 @@ body{overflow-x:hidden}
         +'<span class="snapshot-name">'+esc(p.name)+'</span>'
         +'<span class="snapshot-state '+(yes?"yes":no?"no":wait?"pending":"none")+'">'+label+'</span></div>';
     }).join("");
-    if(!rows)rows='<div class="empty">No players yet. Add your first player under Players.</div>';
+    if(!rows)rows='<div class="empty">No invitations or confirmations yet. Invite players to see their responses here.</div>';
     return '<section class="roster-summary"><div class="roster-title"><h2>Players</h2>'
       +'<button type="button" class="see-all" data-action="show-roster">See All ›</button></div>'
       +'<div class="snapshot-panel">'+rows+'</div></section>';
