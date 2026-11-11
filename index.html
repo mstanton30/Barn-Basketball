@@ -37,7 +37,7 @@
     .badge{font-size:11px;font-weight:800;border-radius:9px;padding:7px 9px;white-space:nowrap;background:#eef2f7;color:#65758d}.badge.yes{background:#e5f7ef;color:#16815c}.badge.pending{background:#fff1d8;color:#a56a0d}.badge.no{background:#f8e9eb;color:#a23b47}.badge.overdue{background:#ffe8cf;color:#ad5612}
     .empty{font-size:13px;color:#7b8b9d;text-align:center;padding:18px}.info-line{font-size:13px;line-height:1.55;color:#647792;margin:0 0 11px}
     label{display:block;color:#586d86;font-size:12px;font-weight:800;margin-bottom:7px}.field{display:block;width:100%;padding:12px;border:1px solid #d5dfeb;background:#fff;border-radius:10px;color:#18314c;outline-color:#7faad0}
-    textarea.field{min-height:94px;line-height:1.5;resize:vertical}.two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-group{margin-bottom:16px}
+    textarea.field{min-height:94px;line-height:1.5;resize:vertical}.two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-group{min-width:0;margin-bottom:16px}
     .preview{background:#eff4fa;border-radius:12px;color:#304963;padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
     .mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.mini-box{background:#f6f8fb;border-radius:11px;text-align:center;padding:11px 3px}.mini-box strong{display:block;font-size:21px}.mini-box small{font-size:10px;color:#75859a}
     .manager{display:flex;align-items:center;gap:10px;min-height:74px}.arrows{display:flex;flex-direction:column;gap:3px}.arrow{height:25px;min-width:31px;border:1px solid #dce4ee;border-radius:6px;background:#fff;color:#536983}
@@ -101,8 +101,11 @@ body::before{content:"";position:fixed;inset:0;background:url("court-lines.svg")
 .info-line{color:#698095}.tiny{color:#a8bfd0}
 label{color:#52647a}.card .tiny{color:#6b7d90}.field{color:#182e48;background:#fff;border:1px solid #c9d6e3;min-height:44px}
 .field:focus{outline:2px solid var(--orange)}
-.field[type="date"],.field[type="time"]{min-width:0;max-width:100%;appearance:none}
-.field[type="date"]::-webkit-date-and-time-value,.field[type="time"]::-webkit-date-and-time-value{min-width:0;text-align:left}
+/* Size the visible field independently of the native iOS picker. */
+.picker-field{display:flex;align-items:center;overflow:hidden;padding:0 12px}
+.picker-field:focus-within{outline:2px solid var(--orange)}
+.picker-field input{display:block;flex:1 1 0%;width:0;min-width:0;max-width:100%;min-height:42px;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:inherit;color-scheme:light;outline:0;-webkit-appearance:none;appearance:none}
+.picker-field input::-webkit-date-and-time-value{min-width:0;margin:0;text-align:left}
 .preview{background:#e9f1f7;color:#213b55}
 .table-wrap{overflow:auto}th{color:#647a90}td{color:#172e47}
 .foot{color:#7792ae;font-size:10px;padding-top:15px}
@@ -517,12 +520,12 @@ dialog .tiny{color:#687f91}
   }
   function renderSettings(){
     var g=game();
-    return '<section class="section"><div class="section-head"><h2>Game & message</h2></div><div class="card"><div class="two-cols"><div class="form-group"><label for="gameDate">Game date</label><input class="field" type="date" id="gameDate" value="'+esc(g.date)+'"></div><div class="form-group"><label for="gameTime">Start time</label><input class="field" type="time" id="gameTime" value="'+esc(g.time)+'"></div></div>'
+    return '<section class="section"><div class="section-head"><h2>Game & message</h2></div><div class="card"><div class="two-cols"><div class="form-group"><label for="gameDate">Game date</label><div class="field picker-field"><input type="date" id="gameDate" value="'+esc(g.date)+'"></div></div><div class="form-group"><label for="gameTime">Start time</label><div class="field picker-field"><input type="time" id="gameTime" value="'+esc(g.time)+'"></div></div></div>'
       +'<div class="form-group"><label for="capacity">Number of players</label><select id="capacity" class="field"><option value="6" '+(g.capacity===6?"selected":"")+'>6 players · 3-on-3</option><option value="8" '+(g.capacity===8?"selected":"")+'>8 players · 4-on-4</option></select></div>'
       +'<div class="form-group"><label for="template">Default invitation message</label><textarea id="template" class="field">'+esc(state.settings.template)+'</textarea><div class="tiny">Use {day}, {time}, and {date} so your invitation updates automatically.</div></div>'
       +'<label>Text preview</label><div class="preview" id="messagePreview">'+esc(message())+'</div>'
       +'<div class="section-head" style="margin-top:20px"><h2>Night-before reminder</h2></div>'
-      +'<div class="form-group"><label for="reminderTime">Alert time (night before)</label><input class="field" type="time" id="reminderTime" value="'+esc(state.settings.reminderTime||"19:00")+'"></div>'
+      +'<div class="form-group"><label for="reminderTime">Alert time (night before)</label><div class="field picker-field"><input type="time" id="reminderTime" value="'+esc(state.settings.reminderTime||"19:00")+'"></div></div>'
       +'<div class="form-group"><label for="reminderTemplate">Reminder message</label><textarea class="field" id="reminderTemplate">'+esc(state.settings.reminderTemplate||"")+'</textarea><div class="tiny">Uses {day}, {date}, and {time}. These will be the game date and time, not the alert time.</div></div>'
       +'<label>Reminder preview</label><div class="preview">'+esc(reminderMessage(g))+'</div>'
       +'<div class="notice neutral">When all players confirm, tap Add iPhone Calendar alert on the Game tab and import the calendar event. iPhone Calendar will notify you at your chosen time. Editing the game later does not change an already imported event; replace it in Calendar.</div>'
