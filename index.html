@@ -320,7 +320,7 @@ dialog .tiny{color:#687f91}
     var pool=state.players.filter(function(p){
       var e=entry(g,p.id);
       if(!p.phone)return false;
-      if(kind==="invite")return p.active&&(!e||e.status==="not invited");
+      if(kind==="invite")return p.active&&statusOf(e)==="not invited";
       return e&&e.status==="yes"&&!e.reminderSentAt;
     });
     return kind==="invite"?pool.slice(0,remaining(g)):(fullRoster(g)?pool:[]);
@@ -336,7 +336,7 @@ dialog .tiny{color:#687f91}
     for(var i=0;i<b.ids.length;i++){
       var p=player(b.ids[i]),e=p?entry(g,p.id):null;
       if(p&&p.phone&&(b.type==="invite"?
-        remaining(g)>0&&p.active&&(!e||e.status==="not invited"):
+        remaining(g)>0&&p.active&&statusOf(e)==="not invited":
         fullRoster(g)&&e&&e.status==="yes"&&!e.reminderSentAt))return {player:p,type:b.type};
     }
     return null;
@@ -563,7 +563,7 @@ dialog .tiny{color:#687f91}
       if(!free){alert("All "+g.capacity+" spots are reserved or confirmed. Resolve pending invitations first.");return}
       list=state.players.filter(function(p){
         var e=entry(g,p.id);
-        return p.active && (!e || e.status==="not invited") && !!p.phone;
+        return p.active && statusOf(e)==="not invited" && !!p.phone;
       }).slice(0,free);
     }else{
       if(!fullRoster(g)){alert("All spots must be confirmed before sending night-before reminders.");return}
@@ -593,7 +593,7 @@ dialog .tiny{color:#687f91}
     while(b.ids.length){
       var p=player(b.ids[0]),e=p?entry(g,p.id):null;
       var eligible=p&&p.phone&&(b.type==="invite"?
-        remaining(g)>0 && p.active && (!e || e.status==="not invited"):
+        remaining(g)>0 && p.active && statusOf(e)==="not invited":
         fullRoster(g) && e && e.status==="yes" && !e.reminderSentAt);
       if(eligible)break;
       b.ids.shift();
@@ -789,7 +789,11 @@ dialog .tiny{color:#687f91}
   document.addEventListener("input",function(ev){if(ev.target.id==="template" || ev.target.id==="gameDate" || ev.target.id==="gameTime"){var g=game(),date=document.getElementById("gameDate").value||g.date,time=document.getElementById("gameTime").value||g.time,tmpl=document.getElementById("template").value;var sample=tmpl.replace(/\{day\}/gi,dayName(date)).replace(/\{time\}/gi,friendlyTime(time)).replace(/\{date\}/gi,longDate(date));document.getElementById("messagePreview").textContent=sample}});
   document.addEventListener("change",function(ev){if(ev.target.id!=="importFile")return;var file=ev.target.files[0];if(!file)return;
     var r=new FileReader();r.onload=function(){try{var data=JSON.parse(r.result);if(!data||data.version!==1||!Array.isArray(data.players)||!Array.isArray(data.games)||!data.games.length||!data.settings||!data.activeGameId)throw Error("Invalid backup");
-      if(confirm("Replace current data with this backup? Export your current data first if you want to keep it.")){state=data;save();changeView("game")}}
+      if(confirm("Replace current data with this backup? Export your current data first if you want to keep it.")){
+        // Importing a backup must never trigger the one-time launch reset.
+        data.liveLaunchResetDone=true;
+        state=migrate(data);writeDraft(null);writeBatch(null);save();changeView("game")
+      }}
       catch(e){alert("That file is not a valid Barn Basketball backup.")}ev.target.value=""};r.readAsText(file);
   });
   save();render();
