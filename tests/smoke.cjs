@@ -3,7 +3,7 @@ const html=fs.readFileSync("index.html","utf8");
 const src=html.match(/<script>([\s\S]*?)<\/script>/i)?.[1];
 assert.ok(src);new vm.Script(src);
 assert.ok(html.includes('autocomplete="name"'));assert.ok(html.includes('autocomplete="tel"'));
-const memory={},nodes={},events={},alerts=[];
+const memory={},nodes={},events={},alerts=[],calendarFiles=[];
 const node=id=>nodes[id]||(nodes[id]={
   textContent:"",innerHTML:"",style:{},classList:{toggle(){}},setAttribute(){},value:"",checked:false,disabled:false,focused:false,
   focus(){this.focused=true},remove(){},
@@ -21,7 +21,10 @@ const ctx={
   document:doc,window:{scrollTo(){},isSecureContext:true},
   localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v},removeItem(k){delete memory[k]}},
   alert(m){alerts.push(m)},confirm(){return true},prompt(){return "no"},
-  navigator:{clipboard:{writeText(){return Promise.resolve()}}},URL,Date,Math,JSON,Object,String,Number,Array,RegExp,Blob,console,
+  navigator:{clipboard:{writeText(){return Promise.resolve()}}},
+  URL:{createObjectURL(blob){calendarFiles.push(blob);return "blob:unit-test"},revokeObjectURL(){}},
+  Date,Math,JSON,Object,String,Number,Array,RegExp,
+  Blob:class {constructor(parts,opts){this.parts=parts;this.type=opts.type}},console,
   setTimeout(){},clearTimeout(){},setInterval(){},
   FileReader:class {readAsText(file){this.result=file.content;this.onload()}}
 };
@@ -133,6 +136,22 @@ assert.equal(memory["barn-basketball-batch-v1"],undefined,"No seventh invite whe
 click("yes","starter-3");click("yes","starter-4");click("yes","starter-5");
 g=get().games[1];
 assert.equal(Object.values(g.roster).filter(e=>e.status==="yes").length,6);
+// Set a future game so the night-before Calendar alert is never in the past.
+tab("settings");
+const ahead=new Date(Date.now()+14*86400000);
+node("gameDate").value=ahead.getFullYear()+"-"+String(ahead.getMonth()+1).padStart(2,"0")+"-"+String(ahead.getDate()).padStart(2,"0");
+node("gameTime").value="10:00";
+node("capacity").value="6";
+node("template").value=get().settings.template;
+node("reminderTime").value="19:00";
+node("reminderTemplate").value=get().settings.reminderTemplate;
+click("save-settings");tab("game");
+click("calendar-reminder");
+assert.ok(calendarFiles.length>0,"Calendar file should be generated");
+const ics=calendarFiles[calendarFiles.length-1].parts.join("");
+assert.ok(ics.includes("BEGIN:VCALENDAR")&&ics.includes("BEGIN:VALARM")&&ics.includes("TRIGGER:PT0S"),"File must contain an iPhone Calendar alarm");
+assert.ok(ics.includes("SUMMARY:Send Barn Basketball reminder texts"));
+assert.ok(ics.includes("T190000"),"Night-before 7 PM default must be preserved");
 click("batch-reminder");
 b=JSON.parse(memory["barn-basketball-batch-v1"]);
 assert.equal(b.type,"reminder");
