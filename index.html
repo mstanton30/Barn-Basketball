@@ -897,6 +897,24 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
       }}
       catch(e){alert("That file is not a valid Barn Basketball backup.")}ev.target.value=""};r.readAsText(file);
   });
+  // Local-only layout report, revealed by five taps on the logo. No saved data.
+  var supportTaps=0,supportLastTap=0;
+  document.querySelector(".brand").addEventListener("click",function(){
+    var now=Date.now();supportTaps=now-supportLastTap<1500?supportTaps+1:1;supportLastTap=now;
+    if(supportTaps<5)return;supportTaps=0;
+    var vv=window.visualViewport,frame=document.getElementById("appFrame"),nav=document.querySelector(".tabs");
+    var rect=function(e){var r=e.getBoundingClientRect();return Math.round(r.top)+" to "+Math.round(r.bottom)};
+    var probe=document.createElement("div");probe.style.cssText="position:fixed;inset:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)";
+    document.body.appendChild(probe);var css=getComputedStyle(probe);
+    var report=["Barn layout diagnostic 1", "Installed: "+(navigator.standalone===true||window.matchMedia("(display-mode: standalone)").matches),
+      "Screen: "+screen.width+" x "+screen.height+"; DPR "+devicePixelRatio,
+      "Window: "+innerWidth+" x "+innerHeight+"; root "+document.documentElement.clientHeight,
+      "Visual: "+(vv?vv.height+"; top "+vv.offsetTop+"; scale "+vv.scale:"none"),
+      "Fixed probe: "+rect(probe), "Frame: "+rect(frame)+"; "+getComputedStyle(frame).position,
+      "Tabs: "+rect(nav)+"; padding "+getComputedStyle(nav).paddingBottom,
+      "Safe top/bottom: "+css.paddingTop+" / "+css.paddingBottom];
+    probe.remove();alert(report.join("\n"));
+  });
   // iOS may publish viewport geometry in several steps after an app switch.
   // Coalesce normal events, then remeasure after resume/keyboard transitions.
   var viewportFrame=0,viewportRetries=[];

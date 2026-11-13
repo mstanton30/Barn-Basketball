@@ -27,7 +27,7 @@ const node=id=>nodes[id]||(nodes[id]={
  addEventListener(type,cb){events["node:"+id+":"+type]=cb},
  querySelector(){return {prepend(){}}},prepend(){}
 });
-const doc={getElementById:node,querySelectorAll(){return []},querySelector(){return {style:{}}},
+const doc={getElementById:node,querySelectorAll(){return []},querySelector(){return {style:{},addEventListener(){}}},
  addEventListener(type,cb){events[type]=cb},
  createElement(){return {dataset:{},remove(){},click(){},style:{}}},
  body:{appendChild(){}}};
