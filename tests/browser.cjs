@@ -48,6 +48,20 @@ const {chromium,webkit}=require('playwright'),fs=require('node:fs'),path=require
  }
 
  await page.evaluate(()=>{delete navigator.standalone;delete visualViewport.height;document.getElementById('viewportMeasure').style.removeProperty('height');document.querySelector('.tabs').style.removeProperty('padding-bottom');window.dispatchEvent(new Event('pageshow'))});await page.waitForTimeout(450);await pinned();
+ // Reproduce actual device geometry, including a physically shorter browser
+ // viewport. Compact controls must stay inside its clickable 812px area.
+ await page.setViewportSize({width:402,height:812});
+ await page.evaluate(()=>{
+   Object.defineProperty(navigator,'standalone',{configurable:true,value:true});
+   Object.defineProperty(screen,'width',{configurable:true,value:402});Object.defineProperty(screen,'height',{configurable:true,value:874});
+   const p=document.getElementById('viewportMeasure');p.style.setProperty('--safe-top','62px');p.style.setProperty('--safe-bottom','34px');
+   window.dispatchEvent(new Event('pageshow'));
+ });await page.waitForTimeout(450);
+ const compact=await page.locator('.tabs').evaluate(e=>({bottom:e.getBoundingClientRect().bottom,padding:getComputedStyle(e).paddingBottom,buttonBottom:e.lastElementChild.getBoundingClientRect().bottom}));
+ assert.equal(compact.padding,'8px');assert.ok(Math.abs(compact.bottom-812)<2);assert.ok(compact.buttonBottom<=804);
+ for(const label of ['Players','Stats','Settings','Home'])await page.getByRole('button',{name:label,exact:true}).click();
+ await page.evaluate(()=>{delete navigator.standalone;delete screen.width;delete screen.height;const p=document.getElementById('viewportMeasure');p.style.removeProperty('--safe-top');p.style.removeProperty('--safe-bottom');window.dispatchEvent(new Event('pageshow'))});await page.waitForTimeout(450);
+ assert.equal(await page.locator('#appFrame').evaluate(e=>e.classList.contains('native-bottom-gutter')),false);
  const storageBefore=await page.evaluate(()=>JSON.stringify(localStorage));
  const boxBefore=await page.locator('.tabs').boundingBox();
  let reports=[];page.on('dialog',async d=>{reports.push(d.message());await d.dismiss()});
