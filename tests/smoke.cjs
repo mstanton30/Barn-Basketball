@@ -20,7 +20,7 @@ assert.ok(jpeg.length>1000&&jpeg[0]===0xff&&jpeg[1]===0xd8&&jpeg.at(-2)===0xff&&
 const memory={},nodes={},events={},alerts=[],calendarFiles=[];
 let confirms=0,prevented=0;
 const node=id=>nodes[id]||(nodes[id]={
- textContent:"",innerHTML:"",style:{setProperty(k,v){this[k]=v}},scrollTo(){this.scrollTop=0},classList:{toggle(){}},setAttribute(){},
+ textContent:"",innerHTML:"",style:{setProperty(k,v){this[k]=v}},scrollTo(){this.scrollTop=0},getBoundingClientRect(){return {height:844}},classList:{toggle(){}},setAttribute(){},
  value:"",checked:false,disabled:false,focused:false,
  focus(){this.focused=true},remove(){},
  showModal(){this.open=true},close(){this.open=false},

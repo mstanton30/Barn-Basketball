@@ -22,6 +22,20 @@ const {chromium,webkit}=require('playwright'),fs=require('node:fs'),path=require
  await page.locator('#gameDate').blur();await page.setViewportSize({width:844,height:390});await page.waitForTimeout(450);await pinned();
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(450);await pinned();
  }
+ // Reproduce the installed-iOS metric mismatch: visualViewport is 62px
+ // shorter while CSS vh fills the usable screen. Keep home-indicator padding.
+ await page.evaluate(()=>{
+   Object.defineProperty(navigator,'standalone',{configurable:true,value:true});
+   Object.defineProperty(visualViewport,'height',{configurable:true,get(){return innerHeight-62}});
+   document.activeElement.blur();
+   document.querySelector('.tabs').style.paddingBottom='42px';
+   window.dispatchEvent(new Event('pageshow'));
+ });
+ await page.waitForTimeout(450);
+ const standalone=await page.evaluate(()=>{const nav=document.querySelector('.tabs');return {bottom:nav.getBoundingClientRect().bottom,full:innerHeight,padding:getComputedStyle(nav).paddingBottom,buttonBottom:nav.lastElementChild.getBoundingClientRect().bottom}});
+ assert.ok(Math.abs(standalone.bottom-standalone.full)<2,JSON.stringify(standalone));
+ assert.equal(standalone.padding,'42px');assert.ok(standalone.bottom-standalone.buttonBottom>=41);
+ await page.evaluate(()=>{delete navigator.standalone;delete visualViewport.height;document.querySelector('.tabs').style.removeProperty('padding-bottom');window.dispatchEvent(new Event('pageshow'))});await page.waitForTimeout(450);await pinned();
  const now=await page.evaluate(()=>JSON.parse(localStorage.getItem('barn-basketball-local-v1')));assert.deepEqual(now.players,JSON.parse(saved).players);assert.deepEqual(errors,[]);
  await page.getByRole('button',{name:'Home',exact:true}).click();await page.screenshot({path:`/tmp/barn-${name}.png`});console.log('PASS '+name+': scrolling, tab changes, app resume, keyboard-size viewport, rotation, repeated flows and saved players');
  }finally{await browser.close()}
