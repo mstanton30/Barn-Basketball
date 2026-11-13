@@ -31,7 +31,7 @@ const doc={getElementById:node,querySelectorAll(){return []},querySelector(){ret
  addEventListener(type,cb){events[type]=cb},
  createElement(){return {dataset:{},remove(){},click(){},style:{}}},
  body:{appendChild(){}}};
-const ctx={document:doc,window:{scrollTo(){},isSecureContext:true,innerHeight:844,requestAnimationFrame(){return 1},addEventListener(){}},
+const ctx={document:doc,window:{getComputedStyle(){return {getPropertyValue(){return "0px"}}},scrollTo(){},isSecureContext:true,innerHeight:844,requestAnimationFrame(){return 1},addEventListener(){}},
  localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v},removeItem(k){delete memory[k]}},
  alert(m){alerts.push(m)},confirm(){confirms++;return true},prompt(){return "no"},
  navigator:{clipboard:{writeText(){return Promise.resolve()}}},

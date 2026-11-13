@@ -193,9 +193,10 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
    versions underreport BOTH height APIs by the status-bar inset. The shell is
    stationary; only .app-scroll scrolls, and tabs remain a normal flex row. */
 .app-frame.standalone-edges{position:fixed;inset:0;height:auto}
-.viewport-measure{position:absolute;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none}
+.viewport-measure{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);position:absolute;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none}
 .app-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior-y:contain;overflow-x:hidden}
 .app-frame>.tabs{position:relative;inset:auto;transform:none;-webkit-transform:none;margin:0 auto;width:100%;max-width:760px;flex:0 0 auto;z-index:30;will-change:auto;contain:none}
+.app-frame.native-bottom-gutter>.tabs{padding-bottom:8px}
 .body{padding-bottom:20px}
 .roster-footnote{font-size:11px;color:#c7c7c7;text-align:center;margin:7px 5px 12px;line-height:1.45}
 </style>
@@ -937,6 +938,17 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
       if(fullHeight>0&&!keyboard){h=fullHeight;top=0;}
     }
     var frame=document.getElementById("appFrame");
+    // Only compact the nav for the measured iOS orphan-gutter pattern.
+    // Its native strip already protects the home indicator; keep 8px spacing.
+    var measureStyle=window.getComputedStyle(document.getElementById("viewportMeasure"));
+    var safeTop=parseFloat(measureStyle.getPropertyValue("--safe-top"))||0;
+    var safeBottom=parseFloat(measureStyle.getPropertyValue("--safe-bottom"))||0;
+    var screen=window.screen,missing=screen?screen.height-window.innerHeight:0;
+    var orphan=!!standalone&&!keyboard&&screen&&screen.height>screen.width&&
+      Math.abs(screen.width-window.innerWidth)<2&&safeTop>0&&safeBottom>0&&
+      missing>=safeBottom&&Math.abs(missing-safeTop)<2&&vv&&
+      Math.abs(vv.height-window.innerHeight)<2&&Math.abs(vv.offsetTop||0)<2;
+    frame.classList.toggle("native-bottom-gutter",!!orphan);
     frame.classList.toggle("standalone-edges",!!standalone&&!keyboard);
     frame.style.setProperty("--app-height",h+"px");
     frame.style.setProperty("--app-top",top+"px");
