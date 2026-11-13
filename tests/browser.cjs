@@ -60,6 +60,25 @@ const {chromium,webkit}=require('playwright'),fs=require('node:fs'),path=require
  const compact=await page.locator('.tabs').evaluate(e=>({bottom:e.getBoundingClientRect().bottom,padding:getComputedStyle(e).paddingBottom,buttonBottom:e.lastElementChild.getBoundingClientRect().bottom}));
  assert.equal(compact.padding,'8px');assert.ok(Math.abs(compact.bottom-812)<2);assert.ok(compact.buttonBottom<=804);
  for(const label of ['Players','Stats','Settings','Home'])await page.getByRole('button',{name:label,exact:true}).click();
+ // An exact additional 34px device preview must always be recoverable even
+ // when the native viewport clips the bottom 26px. It never writes storage.
+ await page.getByRole('button',{name:'Settings',exact:true}).click();
+ const previewStorage=await page.evaluate(()=>JSON.stringify(localStorage));
+ const originalNav=await page.locator('.tabs').boundingBox();
+ for(let i=0;i<2;i++){
+   await page.getByRole('button',{name:'Preview tabs 34px lower',exact:true}).click();
+   const lowered=await page.locator('.tabs').boundingBox();assert.equal(lowered.y-originalNav.y,34);
+   await page.locator('#appScroll').evaluate(e=>e.scrollTop=e.scrollHeight);
+   assert.equal((await page.locator('.tabs').boundingBox()).y,lowered.y,'Preview remains pinned');
+   await page.getByRole('button',{name:'Reset tab position',exact:true}).click();
+   assert.deepEqual(await page.locator('.tabs').boundingBox(),originalNav);
+   assert.equal(await page.evaluate(()=>JSON.stringify(localStorage)),previewStorage);
+ }
+ await page.getByRole('button',{name:'Preview tabs 34px lower',exact:true}).click();
+ await page.reload();
+ assert.equal(await page.locator('#resetTabPreview').isVisible(),false,'Reload restores normal layout');
+ assert.equal(await page.evaluate(()=>JSON.stringify(localStorage)),previewStorage);
+
  await page.evaluate(()=>{delete navigator.standalone;delete screen.width;delete screen.height;const p=document.getElementById('viewportMeasure');p.style.removeProperty('--safe-top');p.style.removeProperty('--safe-bottom');window.dispatchEvent(new Event('pageshow'))});await page.waitForTimeout(450);
  assert.equal(await page.locator('#appFrame').evaluate(e=>e.classList.contains('native-bottom-gutter')),false);
  const storageBefore=await page.evaluate(()=>JSON.stringify(localStorage));
