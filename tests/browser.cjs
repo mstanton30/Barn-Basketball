@@ -9,7 +9,7 @@ const {chromium,webkit}=require('playwright'),fs=require('node:fs'),path=require
  await pinned();
  await page.evaluate(()=>{const k='barn-basketball-local-v1',s=JSON.parse(localStorage.getItem(k));for(let i=0;i<20;i++)s.players.push({id:'fixture-'+i,name:'Test '+i,phone:'+1555555'+String(i).padStart(4,'0'),active:true,regular:false});localStorage.setItem(k,JSON.stringify(s))});await page.reload();
  await page.getByRole('button',{name:'Players',exact:true}).click();await page.locator('#appScroll').evaluate(e=>e.scrollTop=e.scrollHeight);await pinned();
- await page.getByRole('button',{name:'Settings',exact:true}).click();await page.waitForTimeout(500);assert.equal(await page.locator('#appScroll').evaluate(e=>e.scrollTop),0);await pinned();
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await page.waitForFunction(()=>document.getElementById('appScroll').scrollTop<1);await pinned();
  const saved=await page.evaluate(()=>localStorage.getItem('barn-basketball-local-v1'));
  for(let i=0;i<3;i++){
  await page.getByRole('button',{name:'Home',exact:true}).click();
