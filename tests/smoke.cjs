@@ -4,14 +4,11 @@ const src=html.match(/<script>([\s\S]*?)<\/script>/i)?.[1];
 assert.ok(src);new vm.Script(src);
 assert.ok(html.includes('autocomplete="name"'));
 assert.ok(html.indexOf('</main>')<html.indexOf('<nav class="tabs"'),"Tab bar must be outside the scrolling main");
-assert.ok(html.includes('position:fixed!important;inset:auto 0 0 0!important'),"Bottom bar is fixed to viewport");
-assert.ok(html.includes('transform:none!important'),"Avoid iOS transformed fixed bar");
-assert.ok(!html.includes("body{overflow-x:hidden}"),"Body must not become a separate iOS scrolling container");
-assert.ok(html.includes("html{overflow-x:clip}"),"Horizontal clipping belongs on root without scroll container");
-assert.ok(html.includes("body{overflow:visible!important}"),"Document remains the only scrolling viewport");
-assert.ok(!html.includes("isolation:isolate"),"Body isolation must not create a fixed-position stacking issue");
-
-assert.ok(html.includes('z-index:9999!important'),"Tab bar remains above content");assert.ok(html.includes('autocomplete="tel"'));
+assert.ok(html.includes('class="app-frame" id="appFrame"'),"Viewport frame is present");
+assert.ok(html.includes('class="app-scroll" id="appScroll"'),"Only app content scrolls");
+assert.ok(html.includes('.app-frame>.tabs{position:relative;'),"Tabs use a non-scrolling layout row, not a floating fixed layer");
+assert.ok(html.includes('flex:0 0 auto;z-index:30'),"Tabs cannot shrink out of view");
+assert.ok(html.includes('autocomplete="tel"'));
 assert.ok(html.includes('viewBox="0 0 144 62"'),"Top basketball logo has corrected geometry");
 assert.ok(html.includes('M9 61 A63 63 0 0 1 135 61'),"Realistic basketball arc is present");
 assert.ok(html.includes('src="barn-hoop-scoreboard.jpg"'),"Hoop is an explicit image, not a CSS background");
@@ -23,7 +20,7 @@ assert.ok(jpeg.length>1000&&jpeg[0]===0xff&&jpeg[1]===0xd8&&jpeg.at(-2)===0xff&&
 const memory={},nodes={},events={},alerts=[],calendarFiles=[];
 let confirms=0,prevented=0;
 const node=id=>nodes[id]||(nodes[id]={
- textContent:"",innerHTML:"",style:{},classList:{toggle(){}},setAttribute(){},
+ textContent:"",innerHTML:"",style:{setProperty(k,v){this[k]=v}},scrollTo(){this.scrollTop=0},classList:{toggle(){}},setAttribute(){},
  value:"",checked:false,disabled:false,focused:false,
  focus(){this.focused=true},remove(){},
  showModal(){this.open=true},close(){this.open=false},
@@ -34,7 +31,7 @@ const doc={getElementById:node,querySelectorAll(){return []},querySelector(){ret
  addEventListener(type,cb){events[type]=cb},
  createElement(){return {dataset:{},remove(){},click(){},style:{}}},
  body:{appendChild(){}}};
-const ctx={document:doc,window:{scrollTo(){},isSecureContext:true},
+const ctx={document:doc,window:{scrollTo(){},isSecureContext:true,innerHeight:844,requestAnimationFrame(){return 1},addEventListener(){}},
  localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v},removeItem(k){delete memory[k]}},
  alert(m){alerts.push(m)},confirm(){confirms++;return true},prompt(){return "no"},
  navigator:{clipboard:{writeText(){return Promise.resolve()}}},

@@ -1,7 +1,7 @@
 name: Test Barn Basketball
 on:
   push:
-    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation, feature/batch-invites-calendar-reminders, fix/one-tap-sms, design/navy-court-dashboard, fix/basketball-logo-hoop-v2, release/live-cleanup-response-status, fix/reset-invite-shortcut, fix/fixed-bottom-tabbar-ios, fix/dashboard-show-all-invited, fix/dashboard-full-roster-sorted, fix/ios-bottom-nav-scroll-container]
+    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation, feature/batch-invites-calendar-reminders, fix/one-tap-sms, design/navy-court-dashboard, fix/basketball-logo-hoop-v2, release/live-cleanup-response-status, fix/reset-invite-shortcut, fix/fixed-bottom-tabbar-ios, fix/dashboard-show-all-invited, fix/dashboard-full-roster-sorted, fix/ios-bottom-nav-scroll-container, fix/viewport-shell-tabs]
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,4 +14,15 @@ jobs:
         with:
           node-version: '22'
       - name: Run app smoke tests
-        run: node tests/smoke.cjs
+        run: npm test
+      - name: Install browser test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Exercise mobile viewport and resume flows
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-layouts
+          path: /tmp/barn-*.png

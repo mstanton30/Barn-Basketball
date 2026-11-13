@@ -1,0 +1,6 @@
+{
+  "name": "barn-basketball-checks",
+  "private": true,
+  "scripts": { "test": "node tests/smoke.cjs && node tests/viewport.cjs", "test:browser": "node tests/browser.cjs" },
+  "devDependencies": { "playwright": "1.62.1" }
+}
