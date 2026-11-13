@@ -1,7 +1,7 @@
 name: Test Barn Basketball
 on:
   push:
-    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation, feature/batch-invites-calendar-reminders, fix/one-tap-sms, design/navy-court-dashboard, fix/basketball-logo-hoop-v2, release/live-cleanup-response-status, fix/reset-invite-shortcut, fix/fixed-bottom-tabbar-ios, fix/dashboard-show-all-invited, fix/dashboard-full-roster-sorted, fix/ios-bottom-nav-scroll-container, fix/viewport-shell-tabs]
+    branches: [main, feature/contacts-and-no-shows, fix/invite-send-confirmation, feature/batch-invites-calendar-reminders, fix/one-tap-sms, design/navy-court-dashboard, fix/basketball-logo-hoop-v2, release/live-cleanup-response-status, fix/reset-invite-shortcut, fix/fixed-bottom-tabbar-ios, fix/dashboard-show-all-invited, fix/dashboard-full-roster-sorted, fix/ios-bottom-nav-scroll-container, fix/viewport-shell-tabs, fix/standalone-bottom-gap]
   workflow_dispatch:
 permissions:
   contents: read
