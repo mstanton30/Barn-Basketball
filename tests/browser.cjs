@@ -48,6 +48,17 @@ const {chromium,webkit}=require('playwright'),fs=require('node:fs'),path=require
  }
 
  await page.evaluate(()=>{delete navigator.standalone;delete visualViewport.height;document.getElementById('viewportMeasure').style.removeProperty('height');document.querySelector('.tabs').style.removeProperty('padding-bottom');window.dispatchEvent(new Event('pageshow'))});await page.waitForTimeout(450);await pinned();
+ const storageBefore=await page.evaluate(()=>JSON.stringify(localStorage));
+ const boxBefore=await page.locator('.tabs').boundingBox();
+ let reports=[];page.on('dialog',async d=>{reports.push(d.message());await d.dismiss()});
+ for(let i=0;i<4;i++)await page.locator('.brand').click();
+ assert.equal(reports.length,0,'Diagnostic must stay hidden before five taps');
+ await page.locator('.brand').click();await page.waitForTimeout(100);
+ assert.equal(reports.length,1);assert.ok(reports[0].includes('Barn layout diagnostic 1'));assert.ok(reports[0].includes('Fixed probe:'));
+ assert.ok(!reports[0].includes('Test 0'));assert.ok(!reports[0].includes('+1555'));
+ assert.equal(await page.evaluate(()=>JSON.stringify(localStorage)),storageBefore,'Diagnostic leaves all saved data unchanged');
+ assert.deepEqual(await page.locator('.tabs').boundingBox(),boxBefore,'Diagnostic leaves layout unchanged');
+ for(let i=0;i<5;i++)await page.locator('.brand').click();await page.waitForTimeout(100);assert.equal(reports.length,2,'Diagnostic can reopen');
  const now=await page.evaluate(()=>JSON.parse(localStorage.getItem('barn-basketball-local-v1')));assert.deepEqual(now.players,JSON.parse(saved).players);assert.deepEqual(errors,[]);
  await page.getByRole('button',{name:'Home',exact:true}).click();await page.screenshot({path:`/tmp/barn-${name}.png`});console.log('PASS '+name+': scrolling, tab changes, app resume, keyboard-size viewport, rotation, repeated flows and saved players');
  }finally{await browser.close()}
