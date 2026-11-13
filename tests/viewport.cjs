@@ -1,12 +1,12 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
 const src=html.slice(html.indexOf('  var viewportFrame='),html.indexOf('  save();render();\n})();'));
-const events={},props={},frames=[],timers=new Map();let nextTimer=1;
+const events={},props={},classes={},frames=[],timers=new Map();let nextTimer=1;
 const target=prefix=>({addEventListener(name,fn){events[prefix+name]=fn}});
 const vv={...target('vv:'),height:844,offsetTop:0,scale:1};
 const window={...target('window:'),visualViewport:vv,innerHeight:844,requestAnimationFrame(fn){frames.push(fn);return frames.length}};
 let fullHeight=844;
-const document={...target('document:'),hidden:false,activeElement:null,getElementById(){return {getBoundingClientRect(){return {height:fullHeight}},style:{setProperty(k,v){props[k]=v}}}}};
+const document={...target('document:'),hidden:false,activeElement:null,getElementById(){return {classList:{toggle(name,on){classes[name]=on}},getBoundingClientRect(){return {height:fullHeight}},style:{setProperty(k,v){props[k]=v}}}}};
 const navigator={standalone:false};
 const ctx={window,document,navigator,Math,setTimeout(fn){const id=nextTimer++;timers.set(id,fn);return id},clearTimeout(id){timers.delete(id)}};
 vm.runInNewContext(src,ctx);
@@ -30,11 +30,14 @@ window.visualViewport=null;window.innerHeight=700;events['window:resize']();flus
 // usable screen. Keep the nav at the full edge without changing its padding.
 window.visualViewport=vv;vv.height=750;vv.offsetTop=0;window.innerHeight=750;
 navigator.standalone=true;events['window:pageshow']();flush();
-assert.equal(props['--app-height'],'844px','Standalone must not shrink by safe area twice');
+assert.equal(classes['standalone-edges'],true,'Standalone fills fixed edges regardless of reported height');
+assert.equal(props['--app-height'],'844px','Standalone fallback must not shrink by safe area twice');
 assert.equal(props['--app-top'],'0px');
 document.activeElement={matches(){return true}};vv.height=480;vv.offsetTop=30;
-events['vv:resize']();flush();assert.equal(props['--app-height'],'480px');assert.equal(props['--app-top'],'30px');
+events['vv:resize']();flush();assert.equal(props['--app-height'],'480px');assert.equal(props['--app-top'],'30px');assert.equal(classes['standalone-edges'],false);
 document.activeElement=null;vv.height=750;events['document:focusout']();flush();assert.equal(props['--app-height'],'844px');
 fullHeight=390;vv.height=350;events['window:orientationchange']();flush();assert.equal(props['--app-height'],'390px');
+fullHeight=750;vv.height=750;events['window:pageshow']();flush();assert.equal(classes['standalone-edges'],true,'Even CSS vh underreporting must leave edge anchoring enabled');
+assert.ok(html.includes('.app-frame.standalone-edges{position:fixed;inset:0;height:auto}'),'Standalone ignores shortened CSS and JS heights');
 assert.ok(html.includes('calc(8px + env(safe-area-inset-bottom))'),'Home indicator padding is preserved');
 console.log('PASS: viewport keyboard, Messages resume, delayed metrics, rotation, zoom and fallback');

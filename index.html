@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-layout-build="2026.11.13.3">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -190,6 +190,10 @@ dialog .tiny{color:#7b7b7b}
    rotation and app-resume geometry without touching saved data. */
 html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
 .app-frame{position:absolute;top:var(--app-top,0px);left:0;right:0;height:100vh;height:var(--app-height,100dvh);display:flex;flex-direction:column;overflow:hidden}
+/* Use native edge anchoring, not vh/JS heights, in installed mode. Some iOS
+   versions underreport BOTH height APIs by the status-bar inset. The shell is
+   stationary; only .app-scroll scrolls, and tabs remain a normal flex row. */
+.app-frame.standalone-edges{position:fixed;inset:0;height:auto}
 .viewport-measure{position:absolute;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none}
 .app-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior-y:contain;overflow-x:hidden}
 .app-frame>.tabs{position:relative;inset:auto;transform:none;-webkit-transform:none;margin:0 auto;width:100%;max-width:760px;flex:0 0 auto;z-index:30;will-change:auto;contain:none}
@@ -907,14 +911,16 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
     // screen by the safe-area insets (WebKit 254868). Do not apply those insets
     // twice: size the shell from CSS vh, and keep safe-area padding INSIDE tabs.
     var standalone=navigator.standalone===true||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
+    var keyboard=false;
     if(standalone){
       var fullHeight=document.getElementById("viewportMeasure").getBoundingClientRect().height;
       var active=document.activeElement;
       var editing=active&&active.matches&&active.matches("input,textarea,select,[contenteditable='true']");
-      var keyboard=editing&&vv&&fullHeight-vv.height>120;
+      keyboard=!!(editing&&vv&&fullHeight-vv.height>120);
       if(fullHeight>0&&!keyboard){h=fullHeight;top=0;}
     }
     var frame=document.getElementById("appFrame");
+    frame.classList.toggle("standalone-edges",!!standalone&&!keyboard);
     frame.style.setProperty("--app-height",h+"px");
     frame.style.setProperty("--app-top",top+"px");
   }
