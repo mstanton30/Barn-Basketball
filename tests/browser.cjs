@@ -4,6 +4,8 @@ const browser=await type.launch(name==='chromium'&&process.env.CHROMIUM_PATH?{ex
 try{const page=await browser.newPage({viewport:{width:402,height:812},isMobile:true,hasTouch:true});
 await page.route('http://barn.test/**',r=>{const file=path.basename(new URL(r.request().url()).pathname)||'index.html';return fs.existsSync(file)?r.fulfill({path:file}):r.abort()});
 await page.goto('http://barn.test/');
+// Dedicated synthetic invitees. Production starter roster has no phone numbers.
+await page.evaluate(()=>{const k='barn-basketball-local-v1',s=JSON.parse(localStorage.getItem(k));for(let i=0;i<20;i++)s.players.push({id:'fixture-'+i,name:'Test '+i,phone:'+1555555'+String(i).padStart(4,'0'),active:true,regular:false});localStorage.setItem(k,JSON.stringify(s))});await page.reload();
 await page.getByRole('button',{name:'Settings',exact:true}).click();
 const saved=await page.evaluate(()=>JSON.stringify(localStorage));
 await page.getByRole('button',{name:'Preview SD-style bottom bar',exact:true}).click();
