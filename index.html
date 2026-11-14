@@ -197,9 +197,12 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
 .app-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior-y:contain;overflow-x:hidden}
 .app-frame>.tabs{position:relative;inset:auto;transform:none;-webkit-transform:none;margin:0 auto;width:100%;max-width:760px;flex:0 0 auto;z-index:30;will-change:auto;contain:none}
 .app-frame.native-bottom-gutter>.tabs{padding-bottom:8px}
-/* Temporary device preview: no stored preference and no data migration.
-   Native iOS may clip this shift; the recovery control stays at the top. */
-.app-frame.native-bottom-gutter.lower-tabs-preview>.tabs{transform:translateY(34px);-webkit-transform:translateY(34px)}
+/* Reversible SD-style layout comparison. No persistent preference/data writes.
+   Keep the navigation outside the clipped frame rather than translating below it. */
+body.sd-nav-preview>.tabs{position:fixed;top:auto;bottom:0;left:0;right:0;transform:none;-webkit-transform:none;width:100%;max-width:760px;margin:0 auto;z-index:30}
+body.sd-nav-preview.native-bottom-gutter>.tabs{padding-bottom:8px}
+body.sd-nav-preview .app-frame{padding-bottom:var(--preview-nav-height,0px)}
+body.sd-nav-preview #resetTabPreview{display:block}
 #resetTabPreview{display:none;position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:12px;z-index:1000;min-height:44px;background:#fff;color:#111;border:2px solid #ff7615;border-radius:9px;padding:8px 12px;font-weight:800}
 .app-frame.lower-tabs-preview #resetTabPreview{display:block}
 .body{padding-bottom:20px}
@@ -569,7 +572,7 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
       +'<label>Reminder preview</label><div class="preview">'+esc(reminderMessage(g))+'</div>'
       +'<div class="notice neutral">When all players confirm, tap Add iPhone Calendar alert on the Game tab and import the calendar event. iPhone Calendar will notify you at your chosen time. Editing the game later does not change an already imported event; replace it in Calendar.</div>'
       +'<div class="row-actions"><button class="btn primary" data-action="save-settings">Save changes</button></div></div>'
-      +'<div class="section-head"><h2>iPhone tab position</h2></div><div class="card"><p class="info-line">Try moving the tabs another 34 pixels lower on the affected Home Screen app. If they clip, use Reset tab position at the top. Reloading also resets this temporary preview. Saved basketball data is unchanged.</p><button class="btn" data-action="preview-lower-tabs">Preview tabs 34px lower</button></div>'
+      +'<div class="section-head"><h2>iPhone tab position</h2></div><div class="card"><p class="info-line">Compare an SD Health Stack-style bottom bar, outside the clipped app frame. This is a layout test, not a confirmed iPhone fix. Use Reset tab position at the top to return, or reopen the app. Saved basketball data is unchanged.</p><button class="btn" data-action="preview-lower-tabs">Preview SD-style bottom bar</button></div>'
       +'<div class="section-head"><h2>Back up your data</h2></div><div class="card"><p class="info-line">Players, phone numbers, invitations, and statistics are stored only in this browser. GitHub hosts the app but does not collect this information. Use Export to keep a copy or move to another device.</p>'
       +'<div class="btnrow"><button class="btn" data-action="export">Export backup</button><label class="btn" for="importFile" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import backup</label><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div></div>'
       +'<div class="section-head"><h2>How Barn Basketball works</h2></div><div class="card"><p class="info-line">Invites and reminders open directly in Messages, where you press Send yourself. Opening Messages records an invitation as Pending. If you cancel without sending, tap Not sent to release the slot. Replies are not read automatically. Pending invitations hold a spot until you record Yes, No, or Withdraw. The app checks the 12-hour follow-up window whenever you open it. Confirmed players automatically count as played after game start + 3 hours unless marked No-show. Corrections are allowed later.</p>'
@@ -806,7 +809,11 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
     if(t.dataset.tab){changeView(t.dataset.tab);return}
     var a=t.dataset.action,pid=t.dataset.id,g=game(),p=player(pid),pos=state.players.findIndex(function(x){return x.id===pid});
     if(a==="preview-lower-tabs"||a==="reset-tab-preview"){
-      document.getElementById("appFrame").classList.toggle("lower-tabs-preview",a==="preview-lower-tabs");return;
+      var preview=a==="preview-lower-tabs",frame=document.getElementById("appFrame"),nav=document.querySelector(".tabs");
+      document.body.classList.toggle("sd-nav-preview",preview);
+      (preview?document.body:frame).appendChild(nav);
+      if(!preview){nav.style.removeProperty("top");nav.style.removeProperty("bottom");frame.style.removeProperty("--preview-nav-height");document.body.classList.remove("native-bottom-gutter");}
+      syncViewport();return;
     }
     if(a==="go-settings")changeView("settings");
     if(a==="go-players")changeView("players");
@@ -962,6 +969,15 @@ html,body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;-web
     frame.classList.toggle("standalone-edges",!!standalone&&!keyboard);
     frame.style.setProperty("--app-height",h+"px");
     frame.style.setProperty("--app-top",top+"px");
+    if(document.body.classList.contains("sd-nav-preview")){
+      document.body.classList.toggle("native-bottom-gutter",!!orphan);
+      var nav=document.querySelector(".tabs"),navHeight=nav.getBoundingClientRect().height;
+      frame.style.setProperty("--preview-nav-height",navHeight+"px");
+      // Native fixed bottom anchoring while installed; follow the visual
+      // viewport only when the keyboard is open or running in a browser tab.
+      if(standalone&&!keyboard){nav.style.removeProperty("top");nav.style.removeProperty("bottom");}
+      else{nav.style.top=Math.max(top,top+h-navHeight)+"px";nav.style.bottom="auto";}
+    }
   }
   function queueViewport(){
     if(!viewportFrame)viewportFrame=window.requestAnimationFrame(syncViewport);

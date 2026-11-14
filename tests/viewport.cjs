@@ -6,7 +6,7 @@ const target=prefix=>({addEventListener(name,fn){events[prefix+name]=fn}});
 const vv={...target('vv:'),height:844,offsetTop:0,scale:1};
 const window={getComputedStyle(){return {getPropertyValue(k){return k==='--safe-top'?safeTop+'px':safeBottom+'px'}}},...target('window:'),visualViewport:vv,innerHeight:844,requestAnimationFrame(fn){frames.push(fn);return frames.length}};
 let fullHeight=844,safeTop=0,safeBottom=0;
-const document={...target('document:'),hidden:false,activeElement:null,getElementById(){return {classList:{toggle(name,on){classes[name]=on}},getBoundingClientRect(){return {height:fullHeight}},style:{setProperty(k,v){props[k]=v}}}}};
+const document={body:{classList:{contains(){return false}}},...target('document:'),hidden:false,activeElement:null,getElementById(){return {classList:{toggle(name,on){classes[name]=on}},getBoundingClientRect(){return {height:fullHeight}},style:{setProperty(k,v){props[k]=v}}}}};
 const navigator={standalone:false};
 const ctx={window,document,navigator,Math,setTimeout(fn){const id=nextTimer++;timers.set(id,fn);return id},clearTimeout(id){timers.delete(id)}};
 vm.runInNewContext(src,ctx);
@@ -47,3 +47,16 @@ vv.height=480;document.activeElement={matches(){return true}};events['vv:resize'
 document.activeElement=null;vv.height=812;safeTop=0;events['window:pageshow']();flush();assert.equal(classes['native-bottom-gutter'],false);
 safeTop=62;window.innerHeight=874;vv.height=874;events['window:pageshow']();flush();assert.equal(classes['native-bottom-gutter'],false);
 console.log('PASS: compact padding only for measured native gutter, not keyboard or normal viewport');
+// Preview nav geometry is recalculated during keyboard/resume, with no CSS
+// claim about the physical area below a native iPhone viewport.
+const navStyle={removeProperty(k){delete this[k]}};
+document.querySelector=()=>({style:navStyle,getBoundingClientRect:()=>({height:80})});
+document.body.classList={contains:()=>true,toggle(){}};
+window.innerHeight=812;window.innerWidth=402;fullHeight=812;vv.height=812;vv.offsetTop=0;safeTop=62;safeBottom=34;navigator.standalone=true;document.activeElement=null;
+events['window:pageshow']();flush();
+assert.equal(props['--preview-nav-height'],'80px');assert.equal(navStyle.top,undefined);assert.equal(navStyle.bottom,undefined);
+document.activeElement={matches(){return true}};vv.height=480;vv.offsetTop=30;events['vv:resize']();flush();
+assert.equal(navStyle.top,'430px');assert.equal(navStyle.bottom,'auto');
+document.activeElement=null;vv.height=812;vv.offsetTop=0;
+for(const e of ['window:pageshow','document:visibilitychange','window:focus']){events[e]();flush();assert.equal(navStyle.top,undefined);assert.equal(navStyle.bottom,undefined)}
+console.log('PASS: SD preview keyboard positioning and native-bottom restoration on resume');
