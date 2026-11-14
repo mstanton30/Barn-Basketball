@@ -262,3 +262,42 @@ assert.equal(nav.parent,'frame');assert.equal(previewClasses.has('sd-nav-preview
 assert.equal(nav.style.top,undefined);assert.equal(node('appFrame').style['--preview-nav-height'],undefined);
 assert.equal(JSON.stringify(memory),snapshot,'Preview and reset never change saved data');
 console.log('PASS: SD preview reparent/reserve/reset and byte-identical data');
+// Optional per-game subs: legacy data, both formats, pending reservations and resets.
+nav.addEventListener=function(){};
+let subFixture=get();subFixture.liveLaunchResetDone=true;
+subFixture.games=[{id:'subs-test',date:'2099-01-03',time:'10:00',capacity:6,roster:{},finished:false}];
+subFixture.activeGameId='subs-test';subFixture.players=[];
+for(let i=0;i<12;i++){subFixture.players.push({id:'sub-'+i,name:'Sub test '+i,phone:'+1555000'+String(i).padStart(4,'0'),active:true,regular:i<3});if(i<6)subFixture.games[0].roster['sub-'+i]={status:'yes',invitedAt:i<3?null:1,regular:i<3}}
+memory['barn-basketball-local-v1']=JSON.stringify(subFixture);
+vm.runInNewContext(src,ctx);
+assert.ok(node('content').innerHTML.includes('6 / 6 Players Confirmed'));
+assert.ok(node('content').innerHTML.includes('Want subs this game?'));
+click('configure-subs');assert.ok(node('substitutes').focused);
+const beforeSubs=JSON.stringify(get().games[0].roster);
+function setTarget(cap,extra){setGame('2099-01-03');tab('settings');node('capacity').value=String(cap);node('substitutes').value=String(extra);click('save-settings');tab('game')}
+memory['barn-basketball-batch-v1']=JSON.stringify({type:'invite',gameId:'subs-test',ids:['sub-6'],version:2});
+setTarget(6,2);
+assert.equal(memory['barn-basketball-batch-v1'],undefined,'Target change cancels stale invitation sequence');
+assert.equal(get().games[0].substitutes,2);
+assert.equal(JSON.stringify(get().games[0].roster),beforeSubs);
+assert.ok(node('content').innerHTML.includes('6 / 8 Players Confirmed'));
+assert.ok(node('content').innerHTML.includes('3-on-3 · 2 rotating subs'));
+click('direct-invite','sub-6');click('direct-invite','sub-7');
+assert.equal(get().games[0].roster['sub-7'].status,'pending');
+const reserved=JSON.stringify(get().games[0].roster);click('direct-invite','sub-8');
+assert.equal(JSON.stringify(get().games[0].roster),reserved,'Pending subs prevent over-inviting');
+setTarget(6,-1);assert.equal(get().games[0].substitutes,2,'Negative subs rejected');
+setTarget(6,1.5);assert.equal(get().games[0].substitutes,2,'Fractional subs rejected');
+setTarget(6,0);assert.equal(get().games[0].substitutes,2,'Cannot lower target below reserved spots');
+click('no','sub-6');click('direct-invite','sub-8');
+assert.equal(get().games[0].roster['sub-8'].status,'pending','Declining frees sub spot');
+click('reset-last-invite');assert.equal(get().games[0].roster['sub-8'],undefined,'Reset works for sub invitation');
+setTarget(8,2);assert.ok(node('content').innerHTML.includes('6 / 10 Players Confirmed'));
+assert.ok(node('content').innerHTML.includes('4-on-4 · 2 rotating subs'));
+vm.runInNewContext(src,ctx);assert.equal(get().games[0].substitutes,2,'Subs survive reload');
+const backup={content:JSON.stringify(get())};events.change({target:{id:'importFile',files:[backup],value:''}});
+assert.equal(get().games[0].substitutes,2,'Subs survive backup import');
+click('new-game');assert.equal(get().games.length,2);assert.equal(get().games[0].substitutes,2,'History preserves extra target');
+assert.equal(get().games[1].capacity,8);assert.equal(get().games[1].substitutes||0,0,'New game defaults to no subs');
+assert.ok(node('content').innerHTML.includes('3 / 8 Players Confirmed'));
+console.log('PASS: optional subs for 3v3/4v4, reservations/decline/reset, lower-target guard, legacy/reload/backup/history and no-subs new game');

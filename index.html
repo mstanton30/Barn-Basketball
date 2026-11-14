@@ -383,14 +383,16 @@ body.sd-nav-preview #resetTabPreview{display:block}
   function fillTemplate(template,g){return String(template||"").replace(/\{day\}/gi,dayName(g.date)).replace(/\{time\}/gi,friendlyTime(g.time)).replace(/\{date\}/gi,longDate(g.date))}
   function message(){return fillTemplate(state.settings.template,game())}
   function reminderMessage(g){return fillTemplate(state.settings.reminderTemplate,g)}
-  function remaining(g){return Math.max(0,g.capacity-occupied(g))}
-  function fullRoster(g){return yesCount(g)===g.capacity&&pendingCount(g)===0}
+  function subs(g){return Number.isInteger(g.substitutes)&&g.substitutes>=0?g.substitutes:0}
+  function target(g){return Number(g.capacity)+subs(g)}
+  function remaining(g){return Math.max(0,target(g)-occupied(g))}
+  function fullRoster(g){return yesCount(g)>=target(g)&&pendingCount(g)===0}
   function statusOf(e){if(!e)return "not invited";if(e.status==="no"&&!e.invitedAt)return "not invited";if(e.status==="pending"&&e.invitedAt&&Date.now()-e.invitedAt>=DAY)return "overdue";return e.status}
   function responseLabel(e){var st=statusOf(e);return st==="yes"?"Confirmed":st==="no"?"Declined":st==="pending"?"Awaiting reply":st==="overdue"?"12h overdue":st==="withdrawn"?"Withdrawn":"Not invited"}
   function miniButton(label,action,pid,cls){return '<button class="btn mini '+(cls||"")+'" data-action="'+action+'" data-id="'+esc(pid)+'">'+label+'</button>'}
   function summary(g){
-    var yes=yesCount(g),pending=pendingCount(g),free=Math.max(0,g.capacity-yes-pending);
-    var percent=Math.round(100*yes/g.capacity);
+    var yes=yesCount(g),pending=pendingCount(g),free=Math.max(0,target(g)-yes-pending);
+    var percent=Math.min(100,Math.round(100*yes/target(g)));
     var dateIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h2M14 14h2M8 18h2"/></svg>';
     var clockIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg>';
     var peopleIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M16 6a3 3 0 0 1 0 6M17 16a5 5 0 0 1 5 5"/></svg>';
@@ -399,8 +401,9 @@ body.sd-nav-preview #resetTabPreview{display:block}
       +'<div class="hero-copy"><div class="hero-copy-title">Next game</div>'
       +'<div class="hero-event">'+dateIcon+'<span>'+esc(longDate(g.date))+'</span></div>'
       +'<div class="hero-event">'+clockIcon+'<span>'+esc(friendlyTime(g.time))+'</span></div></div>'
-      +'<div class="hero-progress"><div class="progress-line">'+peopleIcon+'<span>'+yes+' / '+g.capacity+' Players Confirmed</span></div>'
-      +'<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="'+g.capacity+'" aria-valuenow="'+yes+'" aria-label="Confirmed players"><span style="width:'+percent+'%"></span></div>'
+      +'<div class="hero-progress"><div class="progress-line">'+peopleIcon+'<span>'+yes+' / '+target(g)+' Players Confirmed</span></div>'
+      +'<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="'+target(g)+'" aria-valuenow="'+yes+'" aria-label="Confirmed players"><span style="width:'+percent+'%"></span></div>'
+      +'<div class="progress-meta">'+(g.capacity===8?'4-on-4':'3-on-3')+' · '+(subs(g)?subs(g)+' rotating sub'+(subs(g)===1?'':'s'):'No subs')+'</div>'
       +'<div class="progress-meta">'+(pending?pending+' awaiting · ':'')+(free?free+' open':'All spots reserved')+'</div></div></div>';
   }
   function eligibleTextPlayers(g,kind){
@@ -512,7 +515,7 @@ body.sd-nav-preview #resetTabPreview{display:block}
       +'<button type="button" class="reset-invite" data-action="reset-last-invite"'
       +(canReset?'':' disabled aria-disabled="true"')
       +' title="Stop the invite sequence and undo the most recently opened invitation">Reset Invite</button></div>';
-    var secondary='<div class="secondary-tools">'
+    var secondary='<div class="secondary-tools"><button class="btn" data-action="configure-subs">'+(subs(g)?'Change rotating subs':'Want subs this game?')+'</button>'
       +miniButton("Edit Game","go-settings","")
       +miniButton("Review No-shows","attendance","")
       +miniButton("Next Game","new-game","")+'</div>';
@@ -563,7 +566,8 @@ body.sd-nav-preview #resetTabPreview{display:block}
   function renderSettings(){
     var g=game();
     return '<section class="section"><div class="section-head"><h2>Game & message</h2></div><div class="card"><div class="two-cols"><div class="form-group"><label for="gameDate">Game date</label><div class="field picker-field"><input type="date" id="gameDate" value="'+esc(g.date)+'"></div></div><div class="form-group"><label for="gameTime">Start time</label><div class="field picker-field"><input type="time" id="gameTime" value="'+esc(g.time)+'"></div></div></div>'
-      +'<div class="form-group"><label for="capacity">Number of players</label><select id="capacity" class="field"><option value="6" '+(g.capacity===6?"selected":"")+'>6 players · 3-on-3</option><option value="8" '+(g.capacity===8?"selected":"")+'>8 players · 4-on-4</option></select></div>'
+      +'<div class="form-group"><label for="capacity">Game format</label><select id="capacity" class="field"><option value="6" '+(g.capacity===6?"selected":"")+'>6 players · 3-on-3</option><option value="8" '+(g.capacity===8?"selected":"")+'>8 players · 4-on-4</option></select></div>'
+      +'<div class="form-group"><label for="substitutes">Extra players for this game (rotating subs)</label><input id="substitutes" class="field" type="number" min="0" max="20" step="1" value="'+subs(g)+'"><div class="tiny">0 keeps the usual six or eight players. Add subs to increase this game’s invitation target. Confirmed and pending players both reserve spots. New games start with no subs.</div></div>'
       +'<div class="form-group"><label for="template">Default invitation message</label><textarea id="template" class="field">'+esc(state.settings.template)+'</textarea><div class="tiny">Use {day}, {time}, and {date} so your invitation updates automatically.</div></div>'
       +'<label>Text preview</label><div class="preview" id="messagePreview">'+esc(message())+'</div>'
       +'<div class="section-head" style="margin-top:20px"><h2>Night-before reminder</h2></div>'
@@ -586,7 +590,7 @@ body.sd-nav-preview #resetTabPreview{display:block}
   function changeView(v){view=v;render();document.getElementById("appScroll").scrollTo({top:0,behavior:"smooth"})}
   function setResponse(pid,status){
     var g=game(),e=entry(g,pid)||{status:"not invited",invitedAt:null,regular:false,attended:false};
-    if((status==="yes"||status==="pending") && e.status!=="yes" && e.status!=="pending" && occupied(g)>=g.capacity){alert("All "+g.capacity+" spots are already confirmed or pending. Resolve an invitation first.");return}
+    if((status==="yes"||status==="pending") && e.status!=="yes" && e.status!=="pending" && occupied(g)>=target(g)){alert("All "+target(g)+" spots are already confirmed or pending. Resolve an invitation first.");return}
     e.status=status;
     if(status!=="pending"){
       var last=readLastInvite();
@@ -668,7 +672,7 @@ body.sd-nav-preview #resetTabPreview{display:block}
     var g=game(),list=[];
     if(kind==="invite"){
       var free=remaining(g);
-      if(!free){alert("All "+g.capacity+" spots are reserved or confirmed. Resolve pending invitations first.");return}
+      if(!free){alert("All "+target(g)+" spots are reserved or confirmed. Resolve pending invitations first.");return}
       list=state.players.filter(function(p){
         var e=entry(g,p.id);
         return p.active && statusOf(e)==="not invited" && !!p.phone;
@@ -753,7 +757,7 @@ body.sd-nav-preview #resetTabPreview{display:block}
       if(!fullRoster(g)||!old||old.status!=="yes"){alert("This player is no longer confirmed on a full roster; no reminder was recorded.");return}
       old.reminderSentAt=Date.now();
     }else{
-      if(occupied(g)>=g.capacity && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
+      if(occupied(g)>=target(g) && (!old||old.status!=="pending"&&old.status!=="yes")){alert("All spots are already reserved. Please resolve an invitation first.");return}
       g.roster[pid]={status:"pending",invitedAt:Date.now(),regular:false,attended:false};
       g.finished=false;
     }
@@ -883,11 +887,15 @@ body.sd-nav-preview #resetTabPreview{display:block}
     if(a==="save-attendance"){document.querySelectorAll("[data-attendee]").forEach(function(input){var e=entry(g,input.dataset.attendee);if(e){e.noShow=!!input.checked;e.attended=!e.noShow}});g.finished=true;save();document.getElementById("attendanceDialog").close();render()}
     if(a==="new-game"){if(!confirm("Start a new game? Current invitations and responses will stay in History."))return;writeDraft(null);writeBatch(null);writeLastInvite(null);var ng={id:id(),date:nextSaturday(g.date),time:state.settings.defaultTime||"10:00",capacity:state.settings.capacity||6,roster:{},finished:false,createdAt:Date.now()};state.players.forEach(function(pl){if(pl.regular && pl.active)ng.roster[pl.id]={status:"yes",regular:true,invitedAt:null,attended:false}});state.games.push(ng);state.activeGameId=ng.id;save();changeView("game")}
     if(a==="select-game"){state.activeGameId=pid;save();changeView("game")}
+    if(a==="configure-subs"){changeView("settings");document.getElementById("substitutes").focus()}
     if(a==="save-settings"){
       var date=document.getElementById("gameDate").value,time=document.getElementById("gameTime").value,cap=Number(document.getElementById("capacity").value),tmpl=document.getElementById("template").value.trim(),rtime=document.getElementById("reminderTime").value,rtemplate=document.getElementById("reminderTemplate").value.trim();
       if(!date||!time||!tmpl||!rtime||!rtemplate){alert("Please enter the game and reminder times and messages.");return}
-      if(cap<occupied(g)){alert("You already have "+occupied(g)+" confirmed or pending. Resolve invitations before lowering the roster limit.");return}
-      g.date=date;g.time=time;g.capacity=cap;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;state.settings.reminderTime=rtime;state.settings.reminderTemplate=rtemplate;save();render();alert("Game and message saved.")
+      var extra=Number(document.getElementById("substitutes").value);
+      if(![6,8].includes(cap)||!Number.isInteger(extra)||extra<0||extra>20){alert("Choose 3-on-3 or 4-on-4 and a whole number of subs from 0 to 20.");return}
+      if(cap+extra<occupied(g)){alert("You already have "+occupied(g)+" confirmed or pending. Resolve invitations before lowering the roster limit.");return}
+      if(g.capacity!==cap||subs(g)!==extra){writeBatch(null);writeDraft(null)}
+      g.date=date;g.time=time;g.capacity=cap;g.substitutes=extra;state.settings.template=tmpl;state.settings.defaultTime=time;state.settings.capacity=cap;state.settings.reminderTime=rtime;state.settings.reminderTemplate=rtemplate;save();render();alert("Game and message saved.")
     }
     if(a==="export"){var json=JSON.stringify(state,null,2);var blob=new Blob([json],{type:"application/json"});var link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="barn-basketball-backup-"+dateLocal(new Date())+".json";document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)}
     if(a==="clear-current-invitations"){

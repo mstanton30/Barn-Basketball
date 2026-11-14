@@ -82,3 +82,9 @@ On Home, a **Reset Invite** button sits to the right of the main **Invite Player
 - A text already sent in iPhone Messages cannot be unsent by resetting app tracking. **Do not use Reset Invite on a message you actually sent.** For earlier canceled drafts, use **Not sent** beside the affected player under Manage all invitations.
 
 The reset action is stored only on this device and does not require a confirmation dialog.
+
+## Optional rotating subs
+
+Each game can now have extra players in addition to its 3-on-3 (six) or 4-on-4 (eight) format. On Home, tap **Want subs this game?** (or **Change rotating subs**), enter the extra-player count, and save. The confirmed target and invitation limit include those extra players. Pending invitations still reserve spots, so an unanswered invitation cannot accidentally cause over-inviting. A smaller target is rejected while it would exclude already confirmed or pending players.
+
+Existing games and backups without an extra-player count behave exactly as before. The count is saved in that game as `substitutes`, included in backups/history, and resets to zero for each new game. Changing the target cancels the remaining invitation sequence but leaves all already recorded responses intact. No texts are sent automatically, and players are not assigned fixed starter/sub roles: everyone can rotate.
