@@ -24,6 +24,23 @@ const beforeReset=await page.evaluate(()=>JSON.stringify(localStorage));
 await page.getByRole('button',{name:'Reset tab position',exact:true}).click();
 assert.equal(await page.locator('.tabs').evaluate(n=>n.parentElement.id),'appFrame');assert.equal(await page.evaluate(()=>JSON.stringify(localStorage)),beforeReset);
 await page.getByRole('button',{name:'Preview SD-style bottom bar',exact:true}).click();await page.reload();assert.equal(await page.locator('.tabs').evaluate(n=>n.parentElement.id),'appFrame');
+// Exercise the new per-game target through real mobile-sized controls.
+page.on('dialog',d=>d.accept());
+await page.getByRole('button',{name:'Home',exact:true}).click();
+await page.getByRole('button',{name:'Want subs this game?',exact:true}).click();
+await page.locator('#substitutes').fill('2');
+await page.getByRole('button',{name:'Save changes',exact:true}).click();
+await page.getByRole('button',{name:'Home',exact:true}).click();
+assert.ok(await page.getByText('3 / 8 Players Confirmed',{exact:true}).isVisible());
+assert.ok(await page.getByText('3-on-3 · 2 rotating subs',{exact:true}).isVisible());
+await page.getByRole('button',{name:'Change rotating subs',exact:true}).click();
+await page.locator('#capacity').selectOption('8');
+await page.getByRole('button',{name:'Save changes',exact:true}).click();
+await page.reload();await page.getByRole('button',{name:'Home',exact:true}).click();
+assert.ok(await page.getByText('3 / 10 Players Confirmed',{exact:true}).isVisible());
+assert.ok(await page.getByText('4-on-4 · 2 rotating subs',{exact:true}).isVisible());
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+console.log('PASS',name,'optional subs controls, save/reload and both game formats');
 console.log('PASS',name,'SD preview layout, invite/resume, keyboard-size/rotation, reset/reload; simulated browser only');
 }finally{await browser.close()}}
 })().catch(e=>{console.error(e);process.exitCode=1});
