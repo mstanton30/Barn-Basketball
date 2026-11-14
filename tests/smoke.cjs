@@ -30,7 +30,7 @@ const node=id=>nodes[id]||(nodes[id]={
 const doc={getElementById:node,querySelectorAll(){return []},querySelector(){return {style:{},addEventListener(){}}},
  addEventListener(type,cb){events[type]=cb},
  createElement(){return {dataset:{},remove(){},click(){},style:{}}},
- body:{appendChild(){}}};
+ body:{appendChild(){},classList:{contains(){return false}}}};
 const ctx={document:doc,window:{getComputedStyle(){return {getPropertyValue(){return "0px"}}},scrollTo(){},isSecureContext:true,innerHeight:844,requestAnimationFrame(){return 1},addEventListener(){}},
  localStorage:{getItem(k){return memory[k]??null},setItem(k,v){memory[k]=v},removeItem(k){delete memory[k]}},
  alert(m){alerts.push(m)},confirm(){confirms++;return true},prompt(){return "no"},
@@ -244,3 +244,21 @@ assert.equal(restart.games[1].roster["starter-5"].status,"no","One-time cleanup 
 assert.ok(!html.includes("About this test")&&!html.includes("Reset sample data")&&!html.includes("optional in testing"),"Production UI must have no beta language");
 assert.ok(html.includes("Clear current game invitations"),"Safe manual reset of current game is available");
 console.log("PASS: Reset Invite cancels mistaken open and sequence, preserves earlier pending, production migration, one-tap SMS, six-player cap, reminders, attendance and Calendar");
+// Exercise actual delegated preview/reset click handlers without persistent writes.
+const previewClasses=new Set();
+doc.body.classList={contains:k=>previewClasses.has(k),toggle(k,on){on?previewClasses.add(k):previewClasses.delete(k)},remove:k=>previewClasses.delete(k)};
+const nav={style:{removeProperty(k){delete this[k]}},getBoundingClientRect(){return {height:80}}};
+doc.querySelector=()=>nav;
+doc.body.appendChild=e=>{e.parent='body'};
+node('appFrame').appendChild=e=>{e.parent='frame'};
+node('appFrame').style.removeProperty=function(k){delete this[k]};
+const snapshot=JSON.stringify(memory);
+click('preview-lower-tabs');
+assert.equal(nav.parent,'body');assert.equal(previewClasses.has('sd-nav-preview'),true);
+assert.equal(node('appFrame').style['--preview-nav-height'],'80px');
+assert.equal(nav.style.top,'764px');assert.equal(nav.style.bottom,'auto');
+click('reset-tab-preview');
+assert.equal(nav.parent,'frame');assert.equal(previewClasses.has('sd-nav-preview'),false);
+assert.equal(nav.style.top,undefined);assert.equal(node('appFrame').style['--preview-nav-height'],undefined);
+assert.equal(JSON.stringify(memory),snapshot,'Preview and reset never change saved data');
+console.log('PASS: SD preview reparent/reserve/reset and byte-identical data');
